@@ -40,7 +40,10 @@ from backend.app.tools.govt_schemes import run_govt_schemes
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize SQLite tables
-    await init_db()
+    try:
+        await init_db()
+    except Exception as e:
+        print(f"Database init warning (non-fatal on serverless): {e}")
     yield
 
 
