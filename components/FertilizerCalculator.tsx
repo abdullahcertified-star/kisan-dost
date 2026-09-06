@@ -366,7 +366,7 @@ export default function FertilizerCalculator({
                   <span className="text-sm font-semibold text-slate-500">Bags</span>
                 </div>
                 <div className="text-xs text-slate-600 mt-1.5">
-                  50 kg Bag • Est. Cost: <strong className="text-slate-900">PKR {plan.dap_cost_pkr.toLocaleString()}</strong>*
+                  50 kg Bag • Est. Cost: <strong className="text-slate-900">PKR {(plan.dap_cost_pkr ?? 0).toLocaleString()}</strong>*
                 </div>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
@@ -391,7 +391,7 @@ export default function FertilizerCalculator({
                   <span className="text-sm font-semibold text-slate-500">Bags</span>
                 </div>
                 <div className="text-xs text-slate-600 mt-1.5">
-                  50 kg Bag • Est. Cost: <strong className="text-slate-900">PKR {plan.urea_cost_pkr.toLocaleString()}</strong>*
+                  50 kg Bag • Est. Cost: <strong className="text-slate-900">PKR {(plan.urea_cost_pkr ?? 0).toLocaleString()}</strong>*
                 </div>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
@@ -417,7 +417,7 @@ export default function FertilizerCalculator({
                 </div>
                 <div className="text-xs text-slate-600 mt-1.5">
                   {plan.sop_bags > 0 ? (
-                    <>50 kg Bag • Est. Cost: <strong className="text-slate-900">PKR {plan.sop_cost_pkr.toLocaleString()}</strong>*</>
+                    <>50 kg Bag • Est. Cost: <strong className="text-slate-900">PKR {(plan.sop_cost_pkr ?? 0).toLocaleString()}</strong>*</>
                   ) : (
                     'Optional / minimal requirement for this crop'
                   )}
@@ -441,10 +441,10 @@ export default function FertilizerCalculator({
                   </span>
                 </div>
                 <div className="text-2xl sm:text-3xl font-black text-white mt-2">
-                  PKR {plan.estimated_total_cost_pkr.toLocaleString()}
+                  PKR {(plan.estimated_total_cost_pkr ?? plan.total_cost_pkr ?? 0).toLocaleString()}
                 </div>
                 <div className="text-xs text-emerald-100 mt-1">
-                  Avg: <strong>PKR {Math.round(plan.estimated_total_cost_pkr / plan.acres).toLocaleString()}</strong> / acre
+                  Avg: <strong>PKR {Math.round((plan.estimated_total_cost_pkr ?? plan.total_cost_pkr ?? 0) / (plan.acres || 1)).toLocaleString()}</strong> / acre
                 </div>
               </div>
               <div className="mt-4 pt-3 border-t border-white/20 text-[11px] text-emerald-200">
