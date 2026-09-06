@@ -259,3 +259,5 @@ export async function fetchPestDatabase(crop?: string): Promise<any[]> {
   }
   return response.json();
 }
+
+
