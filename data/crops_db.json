@@ -1,0 +1,412 @@
+{
+  "crops": [
+    {
+      "id": "wheat",
+      "crop_name": "Wheat",
+      "crop_name_urdu": "گندم",
+      "season": "Winter / Rabi",
+      "seasons": ["Winter", "Rabi"],
+      "sowing_window": "November 01 to November 30 (Winter / Rabi)",
+      "harvesting_window": "April 15 to May 15",
+      "suitable_provinces": ["Punjab", "Sindh", "KPK", "Balochistan"],
+      "suitable_soil_types": ["Loam (Mera)", "Clay Loam", "Silt Loam", "Sandy Loam"],
+      "water_requirement": "Medium",
+      "irrigation_count": "4-5 irrigations",
+      "irrigation_characteristics": {
+        "critical_stages": [
+          "Crown root initiation (CRI) 20-25 days after sowing",
+          "Tillering stage (45 days)",
+          "Booting / Heading stage (70-75 days)",
+          "Milking / Grain filling stage (90-100 days)"
+        ],
+        "drought_sensitivity": "Moderate",
+        "irrigation_tip": "If water is limited to 2 irrigations, apply at Crown Root (CRI) and Flowering stages."
+      },
+      "approximate_growing_duration_days": 150,
+      "temperature_range": {
+        "min_c": 10.0,
+        "max_c": 32.0,
+        "optimal_c": 20.0
+      },
+      "common_pests": [
+        "Aphids (سست تیلا)",
+        "Yellow / Brown Rust (کنگی / رسٹ)",
+        "Armyworm (لشکری سنڈی)",
+        "Termites (دیمک)"
+      ],
+      "economic_factors": {
+        "avg_yield_maunds_per_acre": 42.0,
+        "market_price_per_maund": 3900,
+        "seed_cost_per_acre": 6000,
+        "land_prep_cost_per_acre": 12000,
+        "fertilizer_cost_per_acre": 25000,
+        "harvesting_cost_per_acre": 14000,
+        "water_and_misc_cost_per_acre": 10000,
+        "total_cost_per_acre": 67000,
+        "gross_revenue_per_acre": 163800,
+        "net_profit_per_acre": 96800
+      }
+    },
+    {
+      "id": "chickpea",
+      "crop_name": "Chickpea (Gram)",
+      "crop_name_urdu": "چنا (دیسی / کابلی)",
+      "season": "Winter / Rabi",
+      "seasons": ["Winter", "Rabi", "Spring"],
+      "sowing_window": "October 10 to November 15 (Winter / Rabi)",
+      "harvesting_window": "March 25 to April 30 (Spring harvest)",
+      "suitable_provinces": ["Punjab", "Sindh", "KPK", "Balochistan"],
+      "suitable_soil_types": ["Sandy Loam (ریتلی میرا)", "Loam (Mera)", "Light Loam"],
+      "water_requirement": "Low",
+      "irrigation_count": "1-2 irrigations (or rainfed / barani)",
+      "irrigation_characteristics": {
+        "critical_stages": [
+          "Pre-flowering vegetative stage",
+          "Pod formation stage"
+        ],
+        "drought_sensitivity": "Very Low (Extremely drought-hardy deep taproot)",
+        "irrigation_tip": "Thrives in limited water and barani conditions (Thal & South Punjab). Excessive irrigation causes fungal blight."
+      },
+      "approximate_growing_duration_days": 140,
+      "temperature_range": {
+        "min_c": 8.0,
+        "max_c": 30.0,
+        "optimal_c": 18.0
+      },
+      "common_pests": [
+        "Gram Pod Borer (چنے کی سنڈی)",
+        "Ascochyta Blight (جھلساؤ)",
+        "Fusarium Wilt (اکھیڑا / سوکا)",
+        "Cutworm (کٹ ورم)"
+      ],
+      "economic_factors": {
+        "avg_yield_maunds_per_acre": 20.0,
+        "market_price_per_maund": 7800,
+        "seed_cost_per_acre": 5500,
+        "land_prep_cost_per_acre": 9000,
+        "fertilizer_cost_per_acre": 12000,
+        "harvesting_cost_per_acre": 11000,
+        "water_and_misc_cost_per_acre": 4000,
+        "total_cost_per_acre": 41500,
+        "gross_revenue_per_acre": 156000,
+        "net_profit_per_acre": 114500
+      }
+    },
+    {
+      "id": "mustard",
+      "crop_name": "Mustard / Canola (Raya)",
+      "crop_name_urdu": "سرسوں / رایا / کینولا",
+      "season": "Winter / Rabi / Spring",
+      "seasons": ["Winter", "Rabi", "Spring"],
+      "sowing_window": "September 20 to October 31 (Winter / Rabi)",
+      "harvesting_window": "March 01 to March 31 (Spring harvest)",
+      "suitable_provinces": ["Punjab", "Sindh", "KPK", "Balochistan"],
+      "suitable_soil_types": ["Sandy Loam", "Loam (Mera)", "Silt Loam"],
+      "water_requirement": "Low",
+      "irrigation_count": "2-3 irrigations",
+      "irrigation_characteristics": {
+        "critical_stages": [
+          "Rosette / branch initiation (30 days)",
+          "Siliqua / pod filling stage (65 days)"
+        ],
+        "drought_sensitivity": "Low",
+        "irrigation_tip": "Highly water-efficient oilseed crop. Excellent for limited canal supply or brackish groundwater areas."
+      },
+      "approximate_growing_duration_days": 130,
+      "temperature_range": {
+        "min_c": 8.0,
+        "max_c": 28.0,
+        "optimal_c": 19.0
+      },
+      "common_pests": [
+        "Mustard Aphid (تیلا / موپا)",
+        "White Rust (سفید کنگی)",
+        "Downy Mildew (پھپھوندی)",
+        "Alternaria Blight (داغ)"
+      ],
+      "economic_factors": {
+        "avg_yield_maunds_per_acre": 22.0,
+        "market_price_per_maund": 7500,
+        "seed_cost_per_acre": 3000,
+        "land_prep_cost_per_acre": 10000,
+        "fertilizer_cost_per_acre": 16000,
+        "harvesting_cost_per_acre": 10000,
+        "water_and_misc_cost_per_acre": 5000,
+        "total_cost_per_acre": 44000,
+        "gross_revenue_per_acre": 165000,
+        "net_profit_per_acre": 121000
+      }
+    },
+    {
+      "id": "barley",
+      "crop_name": "Barley",
+      "crop_name_urdu": "جو (تلبینہ / چارہ)",
+      "season": "Winter / Rabi",
+      "seasons": ["Winter", "Rabi", "Spring"],
+      "sowing_window": "October 20 to November 30 (Winter / Rabi)",
+      "harvesting_window": "March 15 to April 15 (Spring harvest)",
+      "suitable_provinces": ["Punjab", "Sindh", "KPK", "Balochistan"],
+      "suitable_soil_types": ["Sandy Loam", "Light Loam", "Saline / Marginal Soil"],
+      "water_requirement": "Low",
+      "irrigation_count": "1-2 irrigations",
+      "irrigation_characteristics": {
+        "critical_stages": [
+          "Tillering stage (30 days)",
+          "Heading stage (60 days)"
+        ],
+        "drought_sensitivity": "Very Low (High salt and moisture stress tolerance)",
+        "irrigation_tip": "Superior survival on marginal soils, tail-end canals, and limited water supplies compared to wheat."
+      },
+      "approximate_growing_duration_days": 125,
+      "temperature_range": {
+        "min_c": 6.0,
+        "max_c": 30.0,
+        "optimal_c": 18.0
+      },
+      "common_pests": [
+        "Barley Rust (رسٹ)",
+        "Covered Smut (سیاہ کاگی)",
+        "Aphids (سست تیلا)"
+      ],
+      "economic_factors": {
+        "avg_yield_maunds_per_acre": 30.0,
+        "market_price_per_maund": 3200,
+        "seed_cost_per_acre": 4000,
+        "land_prep_cost_per_acre": 8000,
+        "fertilizer_cost_per_acre": 12000,
+        "harvesting_cost_per_acre": 10000,
+        "water_and_misc_cost_per_acre": 3500,
+        "total_cost_per_acre": 37500,
+        "gross_revenue_per_acre": 96000,
+        "net_profit_per_acre": 58500
+      }
+    },
+    {
+      "id": "lentil",
+      "crop_name": "Lentil",
+      "crop_name_urdu": "مسور کی دال",
+      "season": "Winter / Rabi",
+      "seasons": ["Winter", "Rabi", "Spring"],
+      "sowing_window": "October 15 to November 15 (Winter / Rabi)",
+      "harvesting_window": "March 20 to April 15 (Spring harvest)",
+      "suitable_provinces": ["Punjab", "KPK", "Sindh", "Balochistan"],
+      "suitable_soil_types": ["Loam (Mera)", "Silt Loam", "Sandy Loam"],
+      "water_requirement": "Low",
+      "irrigation_count": "1-2 irrigations (or rainfed)",
+      "irrigation_characteristics": {
+        "critical_stages": [
+          "Early vegetative branch initiation",
+          "Pod filling stage"
+        ],
+        "drought_sensitivity": "Low",
+        "irrigation_tip": "Fixes atmospheric nitrogen, restoring soil fertility with minimal irrigation and fertilizer inputs."
+      },
+      "approximate_growing_duration_days": 130,
+      "temperature_range": {
+        "min_c": 8.0,
+        "max_c": 28.0,
+        "optimal_c": 19.0
+      },
+      "common_pests": [
+        "Rust (رسٹ)",
+        "Wilt / Root Rot (اکھیڑا)",
+        "Aphids (تیلا)",
+        "Pod Borer (سنڈی)"
+      ],
+      "economic_factors": {
+        "avg_yield_maunds_per_acre": 14.0,
+        "market_price_per_maund": 8500,
+        "seed_cost_per_acre": 4500,
+        "land_prep_cost_per_acre": 9000,
+        "fertilizer_cost_per_acre": 10000,
+        "harvesting_cost_per_acre": 9000,
+        "water_and_misc_cost_per_acre": 3500,
+        "total_cost_per_acre": 36000,
+        "gross_revenue_per_acre": 119000,
+        "net_profit_per_acre": 83000
+      }
+    },
+    {
+      "id": "potato",
+      "crop_name": "Potato",
+      "crop_name_urdu": "آلو",
+      "season": "Winter / Rabi / Autumn",
+      "seasons": ["Winter", "Rabi", "Autumn", "Spring"],
+      "sowing_window": "Autumn crop: Oct 01 - Oct 31 | Spring crop: Jan 01 - Feb 15",
+      "harvesting_window": "Autumn: Jan 15 - Feb 28 | Spring: April 15 - May 15",
+      "suitable_provinces": ["Punjab", "KPK", "Balochistan"],
+      "suitable_soil_types": ["Loose Sandy Loam", "Friable Loam"],
+      "water_requirement": "High",
+      "irrigation_count": "7-9 irrigations (Frequent light watering)",
+      "irrigation_characteristics": {
+        "critical_stages": [
+          "Sprouting and emergence",
+          "Tuber initiation (stolon swelling)",
+          "Tuber bulking"
+        ],
+        "drought_sensitivity": "Very High (Drought leads to misshapen tubers and severe yield crash)",
+        "irrigation_tip": "Requires steady moisture; NOT recommended under limited water availability."
+      },
+      "approximate_growing_duration_days": 105,
+      "temperature_range": {
+        "min_c": 12.0,
+        "max_c": 25.0,
+        "optimal_c": 18.0
+      },
+      "common_pests": [
+        "Early / Late Blight (پچھیتا و اگیتا جھلساؤ)",
+        "Potato Tuber Moth (آلو کی سنڈی)",
+        "Whitefly (سفید مکھی)",
+        "Aphids (تیلا)"
+      ],
+      "economic_factors": {
+        "avg_yield_maunds_per_acre": 250.0,
+        "market_price_per_maund": 1500,
+        "seed_cost_per_acre": 80000,
+        "land_prep_cost_per_acre": 18000,
+        "fertilizer_cost_per_acre": 38000,
+        "harvesting_cost_per_acre": 25000,
+        "water_and_misc_cost_per_acre": 22000,
+        "total_cost_per_acre": 183000,
+        "gross_revenue_per_acre": 375000,
+        "net_profit_per_acre": 192000
+      }
+    },
+    {
+      "id": "cotton",
+      "crop_name": "Cotton",
+      "crop_name_urdu": "کپاس (چاندی)",
+      "season": "Summer / Kharif",
+      "seasons": ["Summer", "Kharif"],
+      "sowing_window": "April 15 to May 31 (Summer / Kharif)",
+      "harvesting_window": "September 15 to November 30",
+      "suitable_provinces": ["Punjab", "Sindh", "Balochistan"],
+      "suitable_soil_types": ["Deep Loam (Mera)", "Silt Loam"],
+      "water_requirement": "High",
+      "irrigation_count": "5-6 irrigations",
+      "irrigation_characteristics": {
+        "critical_stages": [
+          "Squaring (flower bud formation)",
+          "Peak flowering and boll development"
+        ],
+        "drought_sensitivity": "High during flowering and boll formation",
+        "irrigation_tip": "Summer crop. Water stress causes shed of squares and bolls."
+      },
+      "approximate_growing_duration_days": 180,
+      "temperature_range": {
+        "min_c": 20.0,
+        "max_c": 45.0,
+        "optimal_c": 32.0
+      },
+      "common_pests": [
+        "Whitefly (سفید مکھی)",
+        "Pink Bollworm (گلابی سنڈی)",
+        "Jassid (چست تیلا)",
+        "Cotton Leaf Curl Virus (CLCuV)"
+      ],
+      "economic_factors": {
+        "avg_yield_maunds_per_acre": 28.0,
+        "market_price_per_maund": 8500,
+        "seed_cost_per_acre": 8000,
+        "land_prep_cost_per_acre": 15000,
+        "fertilizer_cost_per_acre": 28000,
+        "harvesting_cost_per_acre": 18000,
+        "water_and_misc_cost_per_acre": 16000,
+        "total_cost_per_acre": 85000,
+        "gross_revenue_per_acre": 238000,
+        "net_profit_per_acre": 153000
+      }
+    },
+    {
+      "id": "rice",
+      "crop_name": "Basmati Rice",
+      "crop_name_urdu": "دھان / باسمتی چاول",
+      "season": "Summer / Kharif",
+      "seasons": ["Summer", "Kharif"],
+      "sowing_window": "May 20 to June 30 (Summer / Kharif Nursery Transplant)",
+      "harvesting_window": "October 15 to November 25",
+      "suitable_provinces": ["Punjab", "Sindh", "Balochistan", "KPK"],
+      "suitable_soil_types": ["Clay Loam (Paki Mera)", "Clay (Heavy Soil)"],
+      "water_requirement": "Very High",
+      "irrigation_count": "Continuous standing water / 15-20 irrigations",
+      "irrigation_characteristics": {
+        "critical_stages": [
+          "Transplanting tillering",
+          "Panicle initiation",
+          "Flowering and grain milk stage"
+        ],
+        "drought_sensitivity": "Extreme (Standing water needed)",
+        "irrigation_tip": "Strictly requires abundant canal water or sweet tubewell supply. Disqualified under limited water."
+      },
+      "approximate_growing_duration_days": 135,
+      "temperature_range": {
+        "min_c": 20.0,
+        "max_c": 38.0,
+        "optimal_c": 28.0
+      },
+      "common_pests": [
+        "Rice Stem Borer (تنے کی سنڈی)",
+        "Leaf Folder (پتہ لپیٹ سنڈی)",
+        "Bacterial Leaf Blight (بیکٹیریل بلائیٹ)",
+        "Brown Plant Hopper"
+      ],
+      "economic_factors": {
+        "avg_yield_maunds_per_acre": 45.0,
+        "market_price_per_maund": 4600,
+        "seed_cost_per_acre": 4500,
+        "land_prep_cost_per_acre": 18000,
+        "fertilizer_cost_per_acre": 26000,
+        "harvesting_cost_per_acre": 15000,
+        "water_and_misc_cost_per_acre": 35000,
+        "total_cost_per_acre": 98500,
+        "gross_revenue_per_acre": 207000,
+        "net_profit_per_acre": 108500
+      }
+    },
+    {
+      "id": "maize",
+      "crop_name": "Maize (Corn)",
+      "crop_name_urdu": "مکئی",
+      "season": "Summer / Spring / Autumn",
+      "seasons": ["Summer", "Kharif", "Spring", "Autumn"],
+      "sowing_window": "Spring: Feb 01 - March 15 | Autumn / Kharif: July 15 - August 15",
+      "harvesting_window": "Spring: June 15 - July 10 | Autumn: Nov 01 - Nov 30",
+      "suitable_provinces": ["Punjab", "KPK", "Sindh"],
+      "suitable_soil_types": ["Deep Loam (Mera)", "Sandy Loam"],
+      "water_requirement": "High",
+      "irrigation_count": "6-8 irrigations",
+      "irrigation_characteristics": {
+        "critical_stages": [
+          "Knee-high vegetative stage",
+          "Tasseling and silking (flowering)",
+          "Grain formation"
+        ],
+        "drought_sensitivity": "High during silking and cob development",
+        "irrigation_tip": "Requires deep fertile soil with good water holding capacity and regular watering intervals."
+      },
+      "approximate_growing_duration_days": 115,
+      "temperature_range": {
+        "min_c": 16.0,
+        "max_c": 38.0,
+        "optimal_c": 27.0
+      },
+      "common_pests": [
+        "Fall Armyworm (فال آرمی ورم)",
+        "Maize Stem Borer (مکئی کا بورر)",
+        "Shoot Fly (شوٹ فلائی)"
+      ],
+      "economic_factors": {
+        "avg_yield_maunds_per_acre": 90.0,
+        "market_price_per_maund": 2400,
+        "seed_cost_per_acre": 16000,
+        "land_prep_cost_per_acre": 14000,
+        "fertilizer_cost_per_acre": 34000,
+        "harvesting_cost_per_acre": 16000,
+        "water_and_misc_cost_per_acre": 18000,
+        "total_cost_per_acre": 98000,
+        "gross_revenue_per_acre": 216000,
+        "net_profit_per_acre": 118000
+      }
+    }
+  ]
+}

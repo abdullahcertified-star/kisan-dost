@@ -367,7 +367,7 @@ export default function Dashboard() {
                 Est. Net Profit ({currentCrop})
               </span>
               <div className="text-2xl font-black text-emerald-800">
-                PKR {profit ? profit.net_profit_pkr.toLocaleString() : '---'}
+                PKR {profit && profit.net_profit_pkr != null ? profit.net_profit_pkr.toLocaleString() : '---'}
               </div>
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">

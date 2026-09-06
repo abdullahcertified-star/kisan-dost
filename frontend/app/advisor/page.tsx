@@ -450,11 +450,11 @@ export default function CropAdvisorPage() {
                     </div>
                     <div className="bg-black/25 backdrop-blur-xs p-3 rounded-xl border border-emerald-600/30">
                       <span className="text-[11px] text-emerald-300 uppercase block font-semibold">Market Rate</span>
-                      <span className="text-xl font-extrabold">PKR {selectedCrop?.market_price_per_maund.toLocaleString()}</span>
+                      <span className="text-xl font-extrabold">PKR {(selectedCrop?.market_price_per_maund ?? 0).toLocaleString()}</span>
                     </div>
                     <div className="bg-black/25 backdrop-blur-xs p-3 rounded-xl border border-emerald-600/30">
                       <span className="text-[11px] text-emerald-300 uppercase block font-semibold">Est. Net Profit</span>
-                      <span className="text-xl font-extrabold text-emerald-400">PKR {selectedCrop?.net_profit_pkr.toLocaleString()}</span>
+                      <span className="text-xl font-extrabold text-emerald-400">PKR {(selectedCrop?.net_profit_pkr ?? 0).toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -559,7 +559,7 @@ export default function CropAdvisorPage() {
                             </p>
                             <p className="flex justify-between">
                               <span className="text-slate-500">Net Profit:</span>
-                              <span className="font-bold text-emerald-700">PKR {c.net_profit_pkr.toLocaleString()}</span>
+                              <span className="font-bold text-emerald-700">PKR {(c.net_profit_pkr ?? 0).toLocaleString()}</span>
                             </p>
                             <p className="flex justify-between">
                               <span className="text-slate-500">Duration:</span>
