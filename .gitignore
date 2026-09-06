@@ -43,3 +43,7 @@ yarn-error.log*
 *.swo
 .DS_Store
 Thumbs.db
+*.tsbuildinfo
+scratch/
+AGENTS.md
+CLAUDE.md
