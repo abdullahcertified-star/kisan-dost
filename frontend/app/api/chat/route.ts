@@ -84,7 +84,12 @@ function getGeminiKey(): string | null {
   }
 }
 
-async function callGemini(messages: Array<{ role: string; content: string }>, extraGrounding?: string, userCustomKey?: string) {
+async function callGemini(
+  messages: Array<{ role: string; content: string }>,
+  extraGrounding?: string,
+  userCustomKey?: string,
+  forcedLanguage?: 'urdu' | 'english' | null
+) {
   const apiKey = (userCustomKey && userCustomKey.trim().length > 10) ? userCustomKey.trim() : getGeminiKey();
   if (!apiKey) return null;
 
@@ -98,6 +103,19 @@ async function callGemini(messages: Array<{ role: string; content: string }>, ex
   }));
 
   let systemPrompt = SYSTEM_INSTRUCTION;
+
+  if (forcedLanguage === 'urdu') {
+    systemPrompt += `\n\n[MANDATORY RESPONSE LANGUAGE: URDU (اردو)]:
+The farmer has explicitly chosen URDU as the response language via the language switcher.
+YOU MUST REPLY 100% ENTIRELY IN PROPER, NATURAL, GRAMMATICAL URDU SCRIPT (اردو رسم الخط).
+Even if the user's prompt is in English (such as "hi", "hello", "weather forecast", "wheat DAP price", "cotton spray") or Roman Urdu, NEVER REPLY IN ENGLISH. Provide the entire reply, all greetings, bullet points, recommendations, and advice in Urdu script (e.g. "السلام علیکم! کسان دوست میں خوش آمدید...").`;
+  } else if (forcedLanguage === 'english') {
+    systemPrompt += `\n\n[MANDATORY RESPONSE LANGUAGE: ENGLISH (EN)]:
+The user has explicitly chosen ENGLISH as the response language via the language switcher.
+YOU MUST REPLY 100% ENTIRELY IN FLUENT, ACCURATE, PROFESSIONAL ENGLISH.
+Even if the user's prompt contains Urdu script or Roman Urdu, translate all agronomy concepts and ALWAYS REPLY FULLY IN ENGLISH.`;
+  }
+
   if (extraGrounding) {
     systemPrompt += `\n\n[LIVE TELEMETRY GROUNDING]:\n${extraGrounding}`;
   }
@@ -145,8 +163,24 @@ export async function POST(req: NextRequest) {
     const sessionId = body.session_id || 'session_' + Date.now();
     const customGeminiKey = (body.custom_gemini_key || req.headers.get('x-gemini-api-key') || '').trim();
     const incomingHistory: Array<{ role: string; content: string }> = body.history || [];
+    const requestedLang = (body.language || body.lang || req.headers.get('x-language') || '').toLowerCase().trim();
+
     const lower = message.toLowerCase();
-    const lang = detectLanguage(message);
+
+    // Determine target response language: explicit toggle has highest priority
+    let lang: 'urdu' | 'roman_urdu' | 'english';
+    let forcedLangForGemini: 'urdu' | 'english' | null = null;
+
+    if (requestedLang === 'ur' || requestedLang === 'urdu') {
+      lang = 'urdu';
+      forcedLangForGemini = 'urdu';
+    } else if (requestedLang === 'en' || requestedLang === 'english') {
+      lang = 'english';
+      forcedLangForGemini = 'english';
+    } else {
+      lang = detectLanguage(message);
+    }
+
     const specialist = classifySpecialistAgent(message);
 
     // 1. Critical Safety Guardrails
@@ -238,7 +272,7 @@ export async function POST(req: NextRequest) {
     ];
 
     // 4. Call Google Gemini LLM with Telemetry Grounding & Personal API Key
-    const geminiResult = await callGemini(conversationMessages, extraGrounding, customGeminiKey);
+    const geminiResult = await callGemini(conversationMessages, extraGrounding, customGeminiKey, forcedLangForGemini);
 
     if (geminiResult) {
       // Dynamic follow-up generation based on query context

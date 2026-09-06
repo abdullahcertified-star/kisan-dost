@@ -108,9 +108,21 @@ export default function AssistantPage() {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [inputKey, setInputKey] = useState('');
   const [keySavedToast, setKeySavedToast] = useState(false);
+  const [lang, setLang] = useState<'en' | 'ur'>('en');
+  const hasAutoSentParam = useRef(false);
 
-  // Initialize session & load chat history and custom Gemini Key
+  // Initialize session, load chat history, custom Gemini Key, and language preference
   useEffect(() => {
+    const savedLang = (localStorage.getItem('kd_lang') as 'en' | 'ur') || 'en';
+    setLang(savedLang);
+
+    const onLangChange = (e: any) => {
+      if (e.detail === 'en' || e.detail === 'ur') {
+        setLang(e.detail);
+      }
+    };
+    window.addEventListener('kd_language_change', onLangChange);
+
     const savedKey = localStorage.getItem('kd_custom_gemini_key') || '';
     setCustomApiKey(savedKey);
     setInputKey(savedKey);
@@ -127,6 +139,31 @@ export default function AssistantPage() {
     const savedHistory = loadSavedItem<Message[]>('kd_chat_history_v2', []);
     if (savedHistory && savedHistory.length > 0) {
       setMessages(savedHistory);
+    }
+
+    return () => {
+      window.removeEventListener('kd_language_change', onLangChange);
+    };
+  }, []);
+
+  const toggleAssistantLanguage = (newLang: 'en' | 'ur') => {
+    setLang(newLang);
+    localStorage.setItem('kd_lang', newLang);
+    document.documentElement.setAttribute('dir', newLang === 'ur' ? 'rtl' : 'ltr');
+    document.documentElement.setAttribute('lang', newLang);
+    window.dispatchEvent(new CustomEvent('kd_language_change', { detail: newLang }));
+  };
+
+  // Auto-send query passed via URL e.g. /assistant?q=hi
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !hasAutoSentParam.current) {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('q');
+      if (q && q.trim()) {
+        hasAutoSentParam.current = true;
+        window.history.replaceState({}, '', window.location.pathname);
+        handleSendMessage(q.trim());
+      }
     }
   }, []);
 
@@ -195,11 +232,13 @@ export default function AssistantPage() {
       }));
 
       const userGeminiKey = localStorage.getItem('kd_custom_gemini_key') || customApiKey || '';
+      const currentLang = localStorage.getItem('kd_lang') || lang || 'en';
 
       const res = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-language': currentLang,
           ...(userGeminiKey ? { 'x-gemini-api-key': userGeminiKey } : {})
         },
         body: JSON.stringify({
@@ -207,6 +246,8 @@ export default function AssistantPage() {
           session_id: sessionId,
           history: historyPayload,
           custom_gemini_key: userGeminiKey,
+          language: currentLang,
+          lang: currentLang,
         }),
       });
 
@@ -406,11 +447,43 @@ export default function AssistantPage() {
 
   return (
     <SaaSLayout
-      title="AI Agronomist Chat"
-      subtitle="Real-time multi-agent agricultural assistant powered by Google Gemini"
-      badge="Gemini Flash Multi-Agent"
+      title={lang === 'ur' ? 'کسان دوست اے آئی ماہر زراعت' : 'AI Agronomist Chat'}
+      subtitle={
+        lang === 'ur'
+          ? 'گوگل جیمنائی سے لیس کسان دوست زرعی چیٹ باٹ (جوابات: اردو)'
+          : 'Real-time multi-agent agricultural assistant powered by Google Gemini'
+      }
+      badge={lang === 'ur' ? 'اردو موڈ فعال ہے' : 'Gemini Flash Multi-Agent'}
       actions={
         <div className="flex items-center space-x-2">
+          {/* Agent Reply Language Toggle Button (EN / اردو) */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/90 text-xs shadow-2xs">
+            <button
+              type="button"
+              onClick={() => toggleAssistantLanguage('en')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                lang === 'en'
+                  ? 'bg-white text-emerald-700 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title="Reply in English"
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleAssistantLanguage('ur')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                lang === 'ur'
+                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title="اردو میں جواب دیں"
+            >
+              اردو
+            </button>
+          </div>
+
           {/* Google AI Studio Key Button */}
           <button
             onClick={() => setShowKeyModal(true)}
@@ -779,8 +852,8 @@ export default function AssistantPage() {
               onKeyDown={handleKeyDown}
               placeholder={
                 isListening
-                  ? 'Listening... Bolain (آپ بولیں، لکھائی خودکار ہو جائے گی)...'
-                  : 'Ask Kisan Dost anything about your crops, fertilizer, mandi rates, or pests...'
+                  ? (lang === 'ur' ? 'آپ بولیں، خودکار لکھائی ہو جائے گی...' : 'Listening... Bolain (Speak now)...')
+                  : (lang === 'ur' ? 'کسان دوست سے فصلوں، کھاد، اسپرے یا غلہ منڈی کے بارے میں کچھ بھی پوچھیں...' : 'Ask Kisan Dost anything about your crops, fertilizer, mandi rates, or pests...')
               }
               className="flex-1 max-h-36 py-2 px-1 sm:px-2 text-xs sm:text-sm bg-transparent border-0 focus:outline-hidden resize-none text-slate-900 placeholder:text-slate-400"
             />
