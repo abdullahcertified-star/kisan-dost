@@ -123,6 +123,7 @@ export async function POST(req: NextRequest) {
       water_availability: body.water_availability || 'Limited',
       land_acres: acres,
       recommendations,
+      recommended_crops: recommendations,
       top_recommendation: top.crop_name,
       total_projected_net_profit: totalProfit,
       total_projected_revenue: totalRevenue,

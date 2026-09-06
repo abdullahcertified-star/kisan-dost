@@ -125,15 +125,28 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const crop = searchParams.get('crop')?.toLowerCase();
   const district = searchParams.get('district');
+  const province = searchParams.get('province');
 
   let filtered = [...SCHEMES];
   if (crop && crop !== 'all') {
     filtered = filtered.filter(s => s.applicable_crops.some(c => c.toLowerCase().includes(crop) || c.includes('All')));
   }
+  if (province && province !== 'All') {
+    filtered = filtered.filter(s => s.province.toLowerCase() === province.toLowerCase() || s.province.toLowerCase() === 'all' || s.province.toLowerCase().includes('pakistan'));
+  }
 
   return NextResponse.json({
     total: filtered.length,
+    total_count: filtered.length,
+    filters: {
+      province: province || 'Punjab',
+      district: district || 'Multan',
+      crop: crop || 'All',
+    },
+    fallback_used: false,
+    message: `${filtered.length} verified government schemes available for your selection.`,
     schemes: filtered,
+    source_disclaimer: 'Official Pakistani agricultural schemes database. Grounded in Punjab Agriculture Department gazettes and verified extension records.',
     disclaimer: 'Official Pakistani agricultural schemes database. Grounded in Punjab Agriculture Department gazettes and verified extension records.'
   });
 }

@@ -4,11 +4,12 @@
  */
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL !== undefined && process.env.NEXT_PUBLIC_API_URL !== ''
-    ? process.env.NEXT_PUBLIC_API_URL
-    : typeof window !== 'undefined'
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== 'undefined'
     ? ''
-    : 'http://127.0.0.1:8000';
+    : process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : '');
 
 export interface HealthResponse {
   status: string;
@@ -85,7 +86,7 @@ export async function updateFarmerProfile(id: string, data: Partial<FarmerProfil
 }
 
 export async function fetchHealth(): Promise<HealthResponse> {
-  const response = await fetch(`${API_BASE_URL}/health`);
+  const response = await fetch(`${API_BASE_URL}/api/health`);
   if (!response.ok) {
     throw new Error(`Health check failed with status: ${response.status}`);
   }
@@ -183,10 +184,10 @@ export async function fetchPestDiagnosis(data: { crop: string; symptoms: string;
 }
 
 export async function fetchMandiPrices(commodity: string, mandi?: string) {
-  const url = new URL(`${API_BASE_URL}/api/tools/mandi-prices`);
-  url.searchParams.append('commodity', commodity);
-  if (mandi) url.searchParams.append('mandi', mandi);
-  const response = await fetch(url.toString());
+  const params = new URLSearchParams();
+  params.append('commodity', commodity);
+  if (mandi) params.append('mandi', mandi);
+  const response = await fetch(`${API_BASE_URL}/api/tools/mandi-prices?${params.toString()}`);
   if (!response.ok) throw new Error('Failed to fetch mandi prices');
   return response.json();
 }
@@ -210,10 +211,11 @@ export async function fetchGovtSchemes(province = 'Punjab', acres = 5.0) {
 import { MandiPricesResponse, ProfitInput, ProfitEstimate, PestDiagnosis, PestDiagnosisRequest } from '../types';
 
 export async function fetchMarketPrices(crop?: string, market?: string): Promise<MandiPricesResponse> {
-  const url = new URL(`${API_BASE_URL}/api/market/prices`);
-  if (crop && crop !== 'All Crops') url.searchParams.append('crop', crop);
-  if (market && market !== 'All Markets') url.searchParams.append('market', market);
-  const response = await fetch(url.toString());
+  const params = new URLSearchParams();
+  if (crop && crop !== 'All Crops') params.append('crop', crop);
+  if (market && market !== 'All Markets') params.append('market', market);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  const response = await fetch(`${API_BASE_URL}/api/market/prices${qs}`);
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new Error(err.detail ? (Array.isArray(err.detail) ? err.detail[0]?.msg : err.detail) : `Failed with status ${response.status}`);
@@ -248,13 +250,12 @@ export async function diagnosePestProblem(payload: PestDiagnosisRequest): Promis
 }
 
 export async function fetchPestDatabase(crop?: string): Promise<any[]> {
-  const url = new URL(`${API_BASE_URL}/api/pest-doctor/database`);
-  if (crop && crop !== 'All Crops' && crop !== 'All') url.searchParams.append('crop', crop);
-  const response = await fetch(url.toString());
+  const params = new URLSearchParams();
+  if (crop && crop !== 'All Crops' && crop !== 'All') params.append('crop', crop);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  const response = await fetch(`${API_BASE_URL}/api/pest-doctor/database${qs}`);
   if (!response.ok) {
     throw new Error('Failed to fetch pest knowledge base');
   }
   return response.json();
 }
-
-

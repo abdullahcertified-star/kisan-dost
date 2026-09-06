@@ -93,7 +93,7 @@ export default function FertilizerCalculator({
     };
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/fertilizer/calculate', {
+      const res = await fetch('/api/fertilizer/calculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
