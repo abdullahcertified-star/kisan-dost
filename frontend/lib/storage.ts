@@ -55,7 +55,8 @@ export function setAuthSession(token: string, profile: any): void {
   try {
     window.localStorage.setItem('kisan_auth_token', token);
     saveItem('kisan_farmer_profile', profile);
-    document.cookie = `kisan_auth_token=${token}; path=/; max-age=604800; SameSite=Lax`;
+    const secureFlag = window.location.protocol === 'https:' ? 'Secure;' : '';
+    document.cookie = `kisan_auth_token=${token}; path=/; max-age=604800; SameSite=Lax; ${secureFlag}`.trim();
   } catch {}
 }
 

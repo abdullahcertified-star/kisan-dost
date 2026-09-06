@@ -154,7 +154,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     const savedLang = localStorage.getItem('kd_lang') as 'en' | 'ur' | null;
     if (savedLang) setLang(savedLang);
 
-    // If already authenticated, redirect to destination or home
+    // If already authenticated, redirect to destination or home immediately
     if (isAuthenticated()) {
       let targetRedirect = '/';
       if (typeof window !== 'undefined') {
@@ -163,8 +163,8 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
         if (from && from.startsWith('/') && !from.startsWith('/login') && !from.startsWith('/register')) {
           targetRedirect = from;
         }
+        window.location.replace(targetRedirect);
       }
-      router.replace(targetRedirect);
       return;
     }
 
@@ -234,20 +234,20 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     // Step 2: Authenticate Gemini Key
     setTimeout(() => {
       setAuthStep(2);
-      setAuthProgress(50);
-    }, 700);
+      setAuthProgress(55);
+    }, 400);
 
     // Step 3: Satellite Telemetry Link
     setTimeout(() => {
       setAuthStep(3);
-      setAuthProgress(80);
-    }, 1400);
+      setAuthProgress(85);
+    }, 850);
 
     // Step 4: Final Launch & Dynamic Route Redirect
     setTimeout(() => {
       setAuthStep(4);
       setAuthProgress(100);
-    }, 2100);
+    }, 1250);
 
     // Read redirect URL
     let targetRedirect = '/';
@@ -259,9 +259,21 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       }
     }
 
+    // Execute real browser navigation (bulletproof across Vercel and local)
     setTimeout(() => {
-      router.push(targetRedirect);
-    }, 2800);
+      if (typeof window !== 'undefined') {
+        window.location.href = targetRedirect || '/';
+      } else {
+        router.push(targetRedirect || '/');
+      }
+    }, 1500);
+
+    // Emergency backup redirect in case browser paused timer
+    setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        window.location.replace(targetRedirect || '/');
+      }
+    }, 2500);
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -435,6 +447,24 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                 <span>4. Telemetry verified. Launching Dashboard...</span>
               </div>
             </div>
+
+            {/* Direct Instant Enter Button in case browser delays auto-redirect */}
+            {authStep >= 4 && (
+              <div className="pt-2 animate-in fade-in zoom-in-95">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/';
+                    }
+                  }}
+                  className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/30 transition transform hover:scale-[1.02] active:scale-98 cursor-pointer"
+                >
+                  <span>{lang === 'ur' ? 'ابھی ڈیش بورڈ کھولیں' : 'Enter Farm OS Dashboard Now'}</span>
+                  <ArrowRight className="w-4 h-4 animate-pulse" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

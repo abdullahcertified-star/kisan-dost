@@ -19,11 +19,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // If already logged in and visiting /login or /register, redirect to dashboard
-  if ((pathname === '/login' || pathname === '/register') && token) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
   return NextResponse.next();
 }
 
