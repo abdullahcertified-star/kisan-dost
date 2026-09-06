@@ -1,0 +1,197 @@
+{
+  "products": {
+    "dap": {
+      "id": "dap",
+      "name_en": "DAP (Di-ammonium Phosphate)",
+      "name_ur": "ڈی اے پی (ڈائی امونیم فاسفیٹ)",
+      "bag_size_kg": 50.0,
+      "n_percent": 18.0,
+      "p_percent": 46.0,
+      "k_percent": 0.0,
+      "n_kg_per_bag": 9.0,
+      "p_kg_per_bag": 23.0,
+      "k_kg_per_bag": 0.0,
+      "estimated_price_pkr": 12800,
+      "is_price_estimate": true,
+      "price_basis": "Market retail survey Punjab & Sindh (estimates subject to seasonal fluctuations)",
+      "timing": "At sowing / basal application (بجائی کے وقت - آخری ہل چلا کر زمین میں ملائیں)"
+    },
+    "urea": {
+      "id": "urea",
+      "name_en": "Urea (Sonafi / Taraqi)",
+      "name_ur": "یوریا (سونا / کسان یوریا)",
+      "bag_size_kg": 50.0,
+      "n_percent": 46.0,
+      "p_percent": 0.0,
+      "k_percent": 0.0,
+      "n_kg_per_bag": 23.0,
+      "p_kg_per_bag": 0.0,
+      "k_kg_per_bag": 0.0,
+      "estimated_price_pkr": 4600,
+      "is_price_estimate": true,
+      "price_basis": "Market retail survey Punjab & Sindh (estimates subject to seasonal fluctuations)",
+      "timing": "Split doses across vegetative stages (پہلا اور دوسرا پانی - بوقت شگوفہ سازی)"
+    },
+    "sop": {
+      "id": "sop",
+      "name_en": "SOP (Sulphate of Potash)",
+      "name_ur": "ایس او پی (پوٹاش)",
+      "bag_size_kg": 50.0,
+      "n_percent": 0.0,
+      "p_percent": 0.0,
+      "k_percent": 50.0,
+      "n_kg_per_bag": 0.0,
+      "p_kg_per_bag": 0.0,
+      "k_kg_per_bag": 25.0,
+      "estimated_price_pkr": 14500,
+      "is_price_estimate": true,
+      "price_basis": "Market retail survey Punjab & Sindh (estimates subject to seasonal fluctuations)",
+      "timing": "At sowing or with first irrigation for starch and grain weight (بجائی کے وقت یا پہلے پانی پر)"
+    }
+  },
+  "crops": {
+    "wheat": {
+      "id": "wheat",
+      "aliases": ["wheat", "gandum", "گندم"],
+      "name_en": "Wheat",
+      "name_ur": "گندم",
+      "benchmark_yield_maunds_per_acre": 40.0,
+      "base_n_kg_per_acre": 50.0,
+      "base_p_kg_per_acre": 35.0,
+      "base_k_kg_per_acre": 25.0,
+      "nitrogen_split_pattern": [
+        {"stage": "Sowing (بجائی)", "ratio": 0.25, "source": "DAP + Urea starter"},
+        {"stage": "1st Irrigation - CRI (پہلا پانی - 20 تا 25 دن)", "ratio": 0.50, "source": "Urea"},
+        {"stage": "2nd Irrigation - Tillering (دوسرا پانی - 40 تا 50 دن)", "ratio": 0.25, "source": "Urea"}
+      ],
+      "agronomic_notes_en": "Apply all DAP and Potash at sowing. Never delay first irrigation nitrogen beyond 25 days after germination.",
+      "agronomic_notes_ur": "تمام ڈی اے پی اور پوٹاش بجائی کے وقت دیں۔ گندم کا پہلا پانی (کاؤن روٹ اسٹیج) 20 سے 25 دن کے اندر لگا کر یوریا کی نصف مقدار لازمی دیں۔"
+    },
+    "chickpea": {
+      "id": "chickpea",
+      "aliases": ["chickpea", "gram", "chana", "چنا"],
+      "name_en": "Chickpea (Gram)",
+      "name_ur": "چنا (دیسی / کابلی)",
+      "benchmark_yield_maunds_per_acre": 18.0,
+      "base_n_kg_per_acre": 10.0,
+      "base_p_kg_per_acre": 25.0,
+      "base_k_kg_per_acre": 0.0,
+      "nitrogen_split_pattern": [
+        {"stage": "Sowing (بجائی)", "ratio": 1.0, "source": "Starter DAP only"}
+      ],
+      "agronomic_notes_en": "Legume crop with atmospheric nitrogen fixation. Excessive nitrogen promotes vegetative rank growth and depresses pod formation. Starter phosphorus is critical.",
+      "agronomic_notes_ur": "چنے کی فصل جڑوں میں بیکٹیریا کے ذریعے ہوا سے نائٹروجن خود بناتی ہے۔ زیادہ یوریا دینے سے فصل صرف قد کاٹھ کرے گی اور پھل نہیں لگے گا۔ صرف بجائی پر فاسفورس (ڈی اے پی) دیں۔"
+    },
+    "mustard": {
+      "id": "mustard",
+      "aliases": ["mustard", "canola", "raya", "sarson", "سرسوں", "کینولا", "رایا"],
+      "name_en": "Mustard / Canola (Raya)",
+      "name_ur": "سرسوں / رایا / کینولا",
+      "benchmark_yield_maunds_per_acre": 22.0,
+      "base_n_kg_per_acre": 35.0,
+      "base_p_kg_per_acre": 25.0,
+      "base_k_kg_per_acre": 15.0,
+      "nitrogen_split_pattern": [
+        {"stage": "Sowing (بجائی)", "ratio": 0.35, "source": "DAP + Starter Urea"},
+        {"stage": "1st Irrigation (پہلا پانی - پھول آنے سے قبل)", "ratio": 0.65, "source": "Remaining Urea"}
+      ],
+      "agronomic_notes_en": "Sulfur and phosphorus are vital for seed oil content synthesis. Apply full phosphorus at land preparation.",
+      "agronomic_notes_ur": "تیل دار اجناس میں فاسفورس اور سلفر تیل کی مقدار بڑھاتے ہیں۔ تمام ڈی اے پی بجائی پر دیں اور باقی ماندہ یوریا پہلے پانی پر پھول آنے سے پہلے مکمل کریں۔"
+    },
+    "rice": {
+      "id": "rice",
+      "aliases": ["rice", "paddy", "chawal", "چاول", "دھان"],
+      "name_en": "Rice (Basmati / Coarse)",
+      "name_ur": "چاول / دھان",
+      "benchmark_yield_maunds_per_acre": 40.0,
+      "base_n_kg_per_acre": 55.0,
+      "base_p_kg_per_acre": 30.0,
+      "base_k_kg_per_acre": 25.0,
+      "nitrogen_split_pattern": [
+        {"stage": "Transplanting / Basal (پنیری منتقلی کے وقت)", "ratio": 0.20, "source": "DAP + starter"},
+        {"stage": "Active Tillering (منتقلی کے 20 تا 25 دن بعد)", "ratio": 0.40, "source": "Urea + Zinc Sulfate"},
+        {"stage": "Panicle Initiation (گوپ کی حالت - 45 تا 50 دن بعد)", "ratio": 0.40, "source": "Remaining Urea"}
+      ],
+      "agronomic_notes_en": "Apply Zinc Sulfate (33% 5-6 kg/acre) at 20-25 days after transplanting to prevent Khaira disease / zinc deficiency. Incorporate DAP in standing water puddling.",
+      "agronomic_notes_ur": "دھان میں کدو کرتے وقت ڈی اے پی اور پوٹاش ڈالیں۔ پنیری لگانے کے 20 سے 25 دن بعد زنک سلفیٹ (33 فیصد والا 6 کلو فی ایکڑ) یوریا کے ساتھ ڈالیں۔"
+    },
+    "cotton": {
+      "id": "cotton",
+      "aliases": ["cotton", "kapas", "کپاس", "پھٹی"],
+      "name_en": "Cotton",
+      "name_ur": "کپاس",
+      "benchmark_yield_maunds_per_acre": 25.0,
+      "base_n_kg_per_acre": 65.0,
+      "base_p_kg_per_acre": 30.0,
+      "base_k_kg_per_acre": 25.0,
+      "nitrogen_split_pattern": [
+        {"stage": "Sowing (بجائی)", "ratio": 0.15, "source": "DAP basal"},
+        {"stage": "Squaring Stage (پہلا ڈوڈیاں بننے کا وقت)", "ratio": 0.35, "source": "Urea"},
+        {"stage": "Flowering & Boll Setting (پھول اور ٹینڈے بننے کا وقت)", "ratio": 0.35, "source": "Urea"},
+        {"stage": "Peak Boll Development (ٹینڈوں کا فربہ ہونا)", "ratio": 0.15, "source": "Remaining Urea"}
+      ],
+      "agronomic_notes_en": "Avoid excessive nitrogen before flowering to prevent vegetative shedding. Potassium is crucial for boll retention and lint quality.",
+      "agronomic_notes_ur": "پھول آنے سے قبل زیادہ یوریا نہ دیں تاکہ بوٹا کاٹھ نہ کرے۔ ٹینڈے بننے کے دوران پوٹاش کی موجودگی گرنے سے بچاتی ہے اور وزن بڑھاتی ہے۔"
+    },
+    "maize": {
+      "id": "maize",
+      "aliases": ["maize", "corn", "makai", "مکئی"],
+      "name_en": "Maize (Spring / Autumn Hybrid)",
+      "name_ur": "مکئی (ہائبرڈ)",
+      "benchmark_yield_maunds_per_acre": 60.0,
+      "base_n_kg_per_acre": 70.0,
+      "base_p_kg_per_acre": 40.0,
+      "base_k_kg_per_acre": 30.0,
+      "nitrogen_split_pattern": [
+        {"stage": "Sowing (بجائی)", "ratio": 0.20, "source": "DAP + SOP basal"},
+        {"stage": "Knee-High Stage (گھٹنے کے برابر قد - 4 تا 5 پتے)", "ratio": 0.40, "source": "Urea"},
+        {"stage": "Tasseling / Silking (بور اور سلک نکلنے پر)", "ratio": 0.40, "source": "Urea"}
+      ],
+      "agronomic_notes_en": "High-yielding hybrid maize is an exhaustive feeder. Split nitrogen into 3 applications to avoid lodging and maximize cob filling.",
+      "agronomic_notes_ur": "ہائبرڈ مکئی زیادہ خوراک لینے والی فصل ہے۔ گھٹنے کے قد پر یوریا کی بھرپور خوراک دیں اور چھلی میں دانہ بھرتے وقت پانی اور نائٹروجن کی کمی نہ ہونے دیں۔"
+    },
+    "potato": {
+      "id": "potato",
+      "aliases": ["potato", "aaloo", "aalu", "آلو"],
+      "name_en": "Potato (Autumn / Spring)",
+      "name_ur": "آلو",
+      "benchmark_yield_maunds_per_acre": 250.0,
+      "base_n_kg_per_acre": 100.0,
+      "base_p_kg_per_acre": 50.0,
+      "base_k_kg_per_acre": 75.0,
+      "nitrogen_split_pattern": [
+        {"stage": "Sowing (کھیلیاں بناتے وقت - بجائی)", "ratio": 0.30, "source": "DAP + Full SOP + Urea starter"},
+        {"stage": "First Earthing Up (مٹی چڑھاتے وقت - 25 تا 30 دن)", "ratio": 0.40, "source": "Urea"},
+        {"stage": "Tuber Bulking (آلو کا سائز بنتے وقت - 45 تا 50 دن)", "ratio": 0.30, "source": "Urea"}
+      ],
+      "agronomic_notes_en": "Potatoes require heavy potassium for tuber development and dry matter. SOP is strongly preferred over MOP as chloride damages skin finish.",
+      "agronomic_notes_ur": "آلو کے لیے پوٹاش کی کھاد انتہائی لازمی ہے۔ مٹی چڑھاتے وقت یوریا ڈالیں اور تپش بڑھنے سے قبل نائٹروجن کا استعمال مکمل کر لیں۔"
+    }
+  },
+  "soil_modifiers": {
+    "sandy_loam": {
+      "aliases": ["sandy loam", "sandy", "ریتلی میرا", "ریتلی"],
+      "n_factor": 1.10,
+      "p_factor": 1.10,
+      "k_factor": 1.05,
+      "notes_en": "Sandy soils have low nutrient retention and higher leaching. Nitrogen must be split into 3-4 light doses.",
+      "notes_ur": "ریتلی مٹی میں کھاد زمین میں نیچے ضائع ہونے کا خطرہ ہوتا ہے، اس لیے یوریا کو 3 سے 4 قسطوں میں تھوڑا تھوڑا کر کے دیں۔"
+    },
+    "loam": {
+      "aliases": ["loam", "mera", "زرخیز میرا", "میرا مٹی", "loamy"],
+      "n_factor": 1.0,
+      "p_factor": 1.0,
+      "k_factor": 1.0,
+      "notes_en": "Ideal agricultural benchmark soil with balanced drainage and cation exchange capacity.",
+      "notes_ur": "زرخیز میرا مٹی کھاد کے جذب کے لیے سب سے بہترین ہے، معیاری مقدار کا اطلاق کریں۔"
+    },
+    "clay_loam": {
+      "aliases": ["clay loam", "clay", "پکی میرا", "چکنی مٹی", "chikni"],
+      "n_factor": 0.95,
+      "p_factor": 1.0,
+      "k_factor": 0.95,
+      "notes_en": "Heavy soil with high nutrient retention capacity. Apply nitrogen cautiously to prevent over-luxuriance.",
+      "notes_ur": "پکی میرا اور چکنی مٹی کھاد کو سنبھال کر رکھتی ہے، نائٹروجن کی معمولی مقدار میں بچت ممکن ہے۔"
+    }
+  }
+}
