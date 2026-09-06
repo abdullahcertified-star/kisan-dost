@@ -2,613 +2,723 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
 import { loadSavedItem } from '@/lib/storage';
 import { API_BASE_URL } from '@/lib/api';
 import {
+  LayoutDashboard,
   Sprout,
-  Bot,
-  LandPlot,
+  Wheat,
+  Bug,
+  Scale,
+  TrendingUp,
   CloudSun,
-  Coins,
+  Landmark,
+  Activity,
+  User,
+  Settings,
+  Search,
+  Bell,
+  ChevronDown,
   Droplets,
-  ShieldCheck,
+  Calendar,
+  CheckCircle2,
+  Clock,
   AlertTriangle,
   ArrowRight,
-  Scale,
-  Bug,
-  Landmark,
-  CheckCircle2,
-  Wind,
-  Droplet,
+  Bot,
   Sliders,
-  Bell,
-  TrendingUp,
-  Sparkles
+  Sparkles,
+  Menu,
+  X,
+  ExternalLink,
+  ShieldCheck,
+  Thermometer,
+  Wind
 } from 'lucide-react';
 
 interface WeatherData {
   district: string;
-  temperature_c?: number;
-  humidity_percent?: number;
-  wind_speed_kph?: number;
-  condition?: string;
-  rain_probability?: number;
-  agricultural_warnings?: string[];
-  irrigation_advice?: string;
+  temperature?: number;
+  apparent_temperature?: number;
+  humidity?: number;
+  wind_speed?: number;
+  weather_condition?: string;
+  forecast_source?: string;
+  temp_max?: number;
+  temp_min?: number;
 }
 
-interface CropRecommendation {
-  crop_name: string;
-  suitability_score: number;
-  reasoning: string;
-  expected_yield_maunds_per_acre: number;
-  water_requirement: string;
-}
-
-interface ProfitData {
-  gross_revenue_pkr: number;
-  total_cost_pkr: number;
-  net_profit_pkr: number;
-  profit_margin_percent?: number;
-  break_even_yield_maunds_per_acre?: number;
-}
-
-export default function Dashboard() {
-  const [district, setDistrict] = useState<string>('Multan');
-  const [acres, setAcres] = useState<number>(5.0);
-  const [season, setSeason] = useState<string>('Kharif');
-  const [currentCrop, setCurrentCrop] = useState<string>('Cotton');
-  const [soilType, setSoilType] = useState<string>('Loam (Mera)');
-  const [waterAccess, setWaterAccess] = useState<string>('Canal + Tube Well');
-
+export default function AgriculturalSaaSDashboard() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [district, setDistrict] = useState('Multan');
+  const [farmerName, setFarmerName] = useState('Sarah Chen');
+  const [farmerRole, setFarmerRole] = useState('Farm Manager');
+  const [farmZone, setFarmZone] = useState('Punjab Agro Zone');
+  const [acres, setAcres] = useState(15);
+  const [activeFields, setActiveFields] = useState(12);
+  const [selectedYear, setSelectedYear] = useState('2026');
+  const [searchQuery, setSearchQuery] = useState('');
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [recommendedCrops, setRecommendedCrops] = useState<CropRecommendation[]>([]);
-  const [profit, setProfit] = useState<ProfitData | null>(null);
-  const [alerts, setAlerts] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoadingWeather, setIsLoadingWeather] = useState(false);
+  const [harvestMetric, setHarvestMetric] = useState({
+    harvestedTons: 15.6,
+    goalTons: 20.0,
+    percentage: 78,
+  });
 
-  // Load saved farm profile on mount
+  // Load saved profile if available
   useEffect(() => {
-    const saved = loadSavedItem<any>('kd_dashboard_profile', null);
-    if (saved) {
-      if (saved.district) setDistrict(saved.district);
-      if (saved.acres) setAcres(Number(saved.acres));
-      if (saved.season) setSeason(saved.season);
-      if (saved.crop) setCurrentCrop(saved.crop);
-      if (saved.soil) setSoilType(saved.soil);
-      if (saved.water) setWaterAccess(saved.water);
+    const profile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
+    if (profile) {
+      if (profile.name) setFarmerName(profile.name);
+      if (profile.district) setDistrict(profile.district);
+      if (profile.land_acres) setAcres(Number(profile.land_acres));
+      if (profile.role) setFarmerRole(profile.role);
     }
   }, []);
 
-  // Fetch real backend data whenever farm profile parameters change
+  // Fetch live weather data
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      setIsLoading(true);
-      const apiUrl = API_BASE_URL;
-
+    const fetchWeather = async () => {
+      setIsLoadingWeather(true);
       try {
-        // 1. Fetch Real Weather Data
-        try {
-          const wRes = await fetch(`${apiUrl}/api/weather/${district}`);
-          if (wRes.ok) {
-            const wData = await wRes.json();
-            setWeather({
-              district: wData.district || district,
-              temperature_c: wData.current?.temperature_c ?? 32,
-              humidity_percent: wData.current?.relative_humidity_percent ?? 45,
-              wind_speed_kph: wData.current?.wind_speed_kmh ?? 12,
-              condition: wData.current?.weather_description ?? 'Partly Cloudy',
-              rain_probability: wData.forecast_days?.[0]?.precipitation_probability_percent ?? 15,
-              agricultural_warnings: wData.agricultural_warnings || [],
-              irrigation_advice: wData.crop_stage_advisories?.[0] || 'Standard irrigation schedule recommended.',
-            });
-
-            if (wData.agricultural_warnings && wData.agricultural_warnings.length > 0) {
-              setAlerts(wData.agricultural_warnings);
-            } else {
-              setAlerts([
-                `Optimal spraying conditions in ${district} during early morning hours.`,
-                `Pre-irrigation (Rauni) recommended prior to Kharif sowing.`
-              ]);
-            }
-          }
-        } catch (e) {
-          console.warn('Weather fetch fallback:', e);
-        }
-
-        // 2. Fetch Real Crop Recommendations
-        try {
-          const cRes = await fetch(`${apiUrl}/api/agriculture/recommend`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              district: district,
-              season: season,
-              land_acres: acres,
-              soil_type: soilType,
-              water_availability: waterAccess.toLowerCase().includes('limited') ? 'Limited' : 'Adequate',
-            }),
+        const res = await fetch(`${API_BASE_URL}/api/weather/${district}`);
+        if (res.ok) {
+          const data = await res.json();
+          setWeather({
+            district: data.district || district,
+            temperature: Math.round(data.temperature ?? 32),
+            apparent_temperature: Math.round(data.apparent_temperature ?? 33),
+            humidity: data.humidity ?? 45,
+            wind_speed: Math.round(data.wind_speed ?? 8),
+            weather_condition: data.weather_condition || 'Partly Cloudy',
+            forecast_source: data.forecast_source || 'Live Open-Meteo',
+            temp_max: data.forecast?.[0]?.temp_max ?? 36,
+            temp_min: data.forecast?.[0]?.temp_min ?? 24,
           });
-          if (cRes.ok) {
-            const cData = await cRes.json();
-            if (cData.recommended_crops) {
-              setRecommendedCrops(cData.recommended_crops.slice(0, 3));
-            }
-          }
-        } catch (e) {
-          console.warn('Crop rec fetch fallback:', e);
         }
-
-        // 3. Fetch Real Profit Estimate
-        try {
-          const pRes = await fetch(`${apiUrl}/api/tools/profit-estimator`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              crop: currentCrop.toLowerCase(),
-              acres: acres,
-              district: district,
-            }),
-          });
-          if (pRes.ok) {
-            const pData = await pRes.json();
-            setProfit({
-              gross_revenue_pkr: pData.expected_gross_revenue_pkr,
-              total_cost_pkr: pData.total_input_cost_pkr,
-              net_profit_pkr: pData.net_margin_pkr,
-              profit_margin_percent: pData.return_on_investment_percent,
-              break_even_yield_maunds_per_acre: pData.break_even_yield_maunds_per_acre,
-            });
-          }
-        } catch (e) {
-          console.warn('Profit fetch fallback:', e);
-        }
-
       } catch (err) {
-        console.error('Failed to load dashboard data:', err);
+        console.warn('Weather fetch fallback:', err);
       } finally {
-        setIsLoading(false);
+        setIsLoadingWeather(false);
       }
     };
+    fetchWeather();
+  }, [district]);
 
-    fetchDashboardData();
-  }, [district, acres, season, currentCrop, soilType, waterAccess]);
+  const navItems = [
+    { name: 'Dashboard', icon: LayoutDashboard, href: '/', active: true },
+    { name: 'Fields & Crops', icon: Sprout, href: '/crops' },
+    { name: 'Crop Advisor', icon: Wheat, href: '/advisor' },
+    { name: 'Fertilizer Calc', icon: Scale, href: '/fertilizer' },
+    { name: 'Pest Doctor', icon: Bug, href: '/pest-doctor' },
+    { name: 'Mandi Rates', icon: TrendingUp, href: '/market' },
+    { name: 'Profit & ROI', icon: Activity, href: '/profit' },
+    { name: 'Weather Radar', icon: CloudSun, href: '/weather' },
+    { name: 'Govt Schemes', icon: Landmark, href: '/schemes' },
+    { name: 'Observability', icon: Sliders, href: '/observability' },
+    { name: 'Settings', icon: Settings, href: '/profile' },
+  ];
 
-  const quickActions = [
+  const tasks = [
     {
-      title: 'AI Farmer Assistant',
-      urdu: 'اے آئی مشیر',
-      desc: 'Ask multi-agent agronomy, pest, mandi rate & profit questions',
-      icon: Bot,
-      href: '/assistant',
-      badge: 'Agent System',
-      badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      iconBg: 'bg-emerald-100 text-emerald-800',
+      id: 1,
+      title: 'Irrigation Check',
+      field: 'Field 4 (Cotton)',
+      priority: 'High',
+      priorityColor: 'text-rose-700 bg-rose-50 border-rose-200',
+      dueDate: 'Due Today',
+      status: 'In Progress',
+      statusColor: 'bg-blue-50 text-blue-700 border-blue-200',
+      icon: Droplets,
+      iconBg: 'bg-blue-50 text-blue-600',
     },
     {
-      title: 'Pest Doctor Clinic',
-      urdu: 'امراض و کیڑے',
-      desc: 'Diagnose leaf symptoms with Punjab Ext. & PARC verified sprays',
-      icon: Bug,
-      href: '/pest-doctor',
-      badge: 'PARC Verified',
-      badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
-      iconBg: 'bg-amber-100 text-amber-800',
-    },
-    {
-      title: 'Fertilizer Calculator',
-      urdu: 'کھاد کا حساب',
-      desc: 'Exact DAP, Urea & SOP bag dosage calculated by soil deficit',
+      id: 2,
+      title: 'Fertilizer Application',
+      field: 'Field 1 (Wheat)',
+      priority: 'Medium',
+      priorityColor: 'text-amber-700 bg-amber-50 border-amber-200',
+      dueDate: 'Due Oct 14',
+      status: 'Scheduled',
+      statusColor: 'bg-slate-100 text-slate-700 border-slate-200',
       icon: Scale,
-      href: '/fertilizer',
-      badge: 'Soil Specific',
-      badgeColor: 'bg-teal-100 text-teal-800 border-teal-200',
-      iconBg: 'bg-teal-100 text-teal-800',
+      iconBg: 'bg-emerald-50 text-emerald-600',
     },
     {
-      title: 'Mandi Rates Benchmark',
-      urdu: 'منڈی ریٹس',
-      desc: 'Daily AMIS wholesale prices for Multan, Faisalabad, Lahore',
+      id: 3,
+      title: 'Pest Scouting (Whitefly)',
+      field: 'Field 8 (Cotton)',
+      priority: 'Low',
+      priorityColor: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+      dueDate: 'Due Oct 15',
+      status: 'Pending',
+      statusColor: 'bg-amber-50 text-amber-700 border-amber-200',
+      icon: Bug,
+      iconBg: 'bg-amber-50 text-amber-600',
+    },
+    {
+      id: 4,
+      title: 'Mandi Rate Price Lock',
+      field: 'Multan Mandi Market',
+      priority: 'Routine',
+      priorityColor: 'text-slate-600 bg-slate-50 border-slate-200',
+      dueDate: 'Daily 10 AM',
+      status: 'Active',
+      statusColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
       icon: TrendingUp,
-      href: '/market',
-      badge: 'AMIS Live',
-      badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
-      iconBg: 'bg-blue-100 text-blue-800',
-    },
-    {
-      title: 'Crop Suitability Engine',
-      urdu: 'فصل انتخاب',
-      desc: 'Find highest yield crop for your specific soil and water profile',
-      icon: Sprout,
-      href: '/crops',
-      badge: 'Zone Grounded',
-      badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      iconBg: 'bg-emerald-100 text-emerald-800',
-    },
-    {
-      title: 'Govt Schemes & Subsidies',
-      urdu: 'حکومتی اسکیمیں',
-      desc: 'Kisan Card 150k interest-free loans & solar tubewell subsidies',
-      icon: Landmark,
-      badge: 'Govt Punjab',
-      badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
-      iconBg: 'bg-purple-100 text-purple-800',
-      href: '/schemes',
+      iconBg: 'bg-emerald-50 text-emerald-600',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8faf9] text-slate-900 flex flex-col font-sans">
-      <Navbar />
+    <div className="min-h-screen bg-[#f4f6f8] text-slate-800 flex font-sans antialiased">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 backdrop-blur-xs z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6">
-        {/* Top Banner: Farm Profile & Overview */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4.5">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shadow-2xs flex-shrink-0">
-              <Sprout className="w-7 h-7" />
+      {/* Sleek Left Sidebar Navigation Panel */}
+      <aside
+        className={`fixed lg:sticky top-0 left-0 h-screen w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between z-50 transition-transform duration-300 ease-in-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
+        <div className="p-5 flex flex-col h-full">
+          {/* Brand Header */}
+          <div className="flex items-center justify-between pb-6 border-b border-slate-100">
+            <Link href="/" className="flex items-center space-x-3 group">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-xs shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                <Sprout className="w-6 h-6" />
+              </div>
+              <div>
+                <span className="text-base font-bold text-slate-900 tracking-tight block">Kisan Dost</span>
+                <span className="text-[11px] text-emerald-600 font-semibold tracking-wide uppercase">Farm SaaS OS</span>
+              </div>
+            </Link>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* User Profile Pill in Sidebar */}
+          <div className="my-5 p-3 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+              {farmerName.charAt(0)}
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-900 truncate">{farmerName}</p>
+              <p className="text-xs text-slate-500 truncate">{farmerRole}</p>
+            </div>
+            <Link href="/profile" className="text-slate-400 hover:text-emerald-600">
+              <ChevronDown className="w-4 h-4" />
+            </Link>
+          </div>
 
+          {/* Navigation Links with Linear Icons */}
+          <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                    item.active
+                      ? 'bg-emerald-50 text-emerald-700 font-semibold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                  }`}
+                >
+                  <Icon
+                    className={`w-5 h-5 transition-colors ${
+                      item.active ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-600'
+                    }`}
+                  />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Sidebar Footer AI Quick Link */}
+          <div className="pt-4 border-t border-slate-100">
+            <Link
+              href="/assistant"
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-xs hover:shadow-emerald-500/20 hover:scale-[1.01] transition-all"
+            >
+              <div className="flex items-center space-x-2.5">
+                <Bot className="w-5 h-5 text-emerald-100" />
+                <span className="text-xs font-semibold">AI Agronomist</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-emerald-200" />
+            </Link>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Top Header Bar */}
+        <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-3.5 flex items-center justify-between z-30">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-                  {isLoading ? 'Syncing...' : 'Active Farm Profile'}
-                </span>
-                <span className="text-xs text-slate-500 font-medium">
-                  South Punjab Agro-Ecological Zone
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-baseline gap-2.5 mt-1.5">
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
-                  Kisan Dost Farm Dashboard
-                </h1>
-                <span className="font-urdu text-emerald-700 font-bold text-lg sm:text-xl">
-                  (کسان ڈیش بورڈ)
-                </span>
-              </div>
-
-              <p className="text-xs sm:text-sm text-slate-600 mt-0.5 flex flex-wrap items-center gap-2">
-                <span>Managed by <strong className="text-slate-800">Muhammad Abdullah</strong></span>
-                <span className="text-slate-300">•</span>
-                <span className="text-emerald-800 font-medium">Grounded in Dept. of Agriculture Punjab data</span>
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                Good Morning, {farmerName.split(' ')[0]}!
+              </h1>
+              <p className="text-xs text-slate-500 hidden sm:block">
+                {farmZone} • Season: Kharif 2026
               </p>
             </div>
           </div>
 
-          {/* Farm Specs Capsule & Action */}
-          <div className="flex flex-wrap items-center gap-2.5 bg-slate-50 border border-slate-200 p-2 rounded-2xl w-full lg:w-auto">
-            <div className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs flex-1 sm:flex-initial min-w-[70px]">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">District</span>
-              <span className="font-bold text-slate-900">{district}</span>
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            {/* Global Search Input */}
+            <div className="relative hidden md:block w-64 lg:w-72">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search fields, tasks, data..."
+                className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+              />
             </div>
-            <div className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs flex-1 sm:flex-initial min-w-[70px]">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Land Area</span>
-              <span className="font-bold text-emerald-800">{acres} Acres</span>
-            </div>
-            <div className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs flex-1 sm:flex-initial min-w-[70px]">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Current Crop</span>
-              <span className="font-bold text-slate-900">{currentCrop}</span>
-            </div>
-            <div className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs flex-1 sm:flex-initial min-w-[70px]">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Season</span>
-              <span className="font-bold text-slate-900">{season}</span>
-            </div>
-            <Link
-              href="/demo"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-xs font-black transition shadow-xs"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-              <span>Demo Mode</span>
-            </Link>
-            <Link
-              href="/profile"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition shadow-xs ml-auto sm:ml-0"
-            >
-              <Sliders className="w-3.5 h-3.5" />
-              <span>Edit Profile</span>
+
+            {/* Notification Bell */}
+            <button className="relative p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors">
+              <Bell className="w-5 h-5" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 absolute top-2 right-2 border-2 border-white" />
+            </button>
+
+            {/* User Avatar Mini */}
+            <Link href="/profile" className="flex items-center space-x-2 p-1 rounded-full hover:ring-2 hover:ring-emerald-500/30 transition-all">
+              <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+                {farmerName.charAt(0)}
+              </div>
             </Link>
           </div>
-        </div>
+        </header>
 
-        {/* 4 Metric Cards Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Metric 1: Cultivated Land Area */}
-          <div className="bg-white border border-slate-200/90 hover:border-emerald-300 rounded-2xl p-5 shadow-xs transition flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Cultivated Land
-              </span>
-              <div className="text-2xl font-black text-slate-900">
-                {acres} <span className="text-sm font-semibold text-slate-500">Acres</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{soilType}</span>
-              </div>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center">
-              <LandPlot className="w-6 h-6" />
-            </div>
-          </div>
-
-          {/* Metric 2: Live Weather */}
-          <div className="bg-white border border-slate-200/90 hover:border-sky-300 rounded-2xl p-5 shadow-xs transition flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Weather in {district}
-              </span>
-              <div className="text-2xl font-black text-slate-900 flex items-baseline gap-2">
-                <span>{weather?.temperature_c ?? '--'}°C</span>
-                <span className="text-xs font-semibold text-sky-700 px-2 py-0.5 rounded-full bg-sky-50 border border-sky-200">
-                  {weather?.condition ?? 'Checking...'}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-xs text-slate-500">
-                <span className="flex items-center gap-1">
-                  <Droplets className="w-3.5 h-3.5 text-sky-600" /> {weather?.humidity_percent ?? 45}%
-                </span>
-                <span className="flex items-center gap-1">
-                  <Wind className="w-3.5 h-3.5 text-slate-400" /> {weather?.wind_speed_kph ?? 12} km/h
-                </span>
-              </div>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-sky-50 border border-sky-100 text-sky-700 flex items-center justify-center">
-              <CloudSun className="w-6 h-6" />
-            </div>
-          </div>
-
-          {/* Metric 3: Estimated Net Profit */}
-          <div className="bg-white border border-slate-200/90 hover:border-emerald-300 rounded-2xl p-5 shadow-xs transition flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Est. Net Profit ({currentCrop})
-              </span>
-              <div className="text-2xl font-black text-emerald-800">
-                PKR {profit && profit.net_profit_pkr != null ? profit.net_profit_pkr.toLocaleString() : '---'}
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                  +{profit?.profit_margin_percent ?? 148}% ROI
-                </span>
-                <span className="text-slate-500">5 Ac Model</span>
-              </div>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center">
-              <Coins className="w-6 h-6" />
-            </div>
-          </div>
-
-          {/* Metric 4: Water & Irrigation */}
-          <div className="bg-white border border-slate-200/90 hover:border-blue-300 rounded-2xl p-5 shadow-xs transition flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Irrigation Status
-              </span>
-              <div className="text-base font-bold text-slate-900 truncate max-w-[160px]">
-                {waterAccess}
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-blue-700 font-semibold">
-                <Droplet className="w-3.5 h-3.5 text-blue-600" />
-                <span>Rain Chance: {weather?.rain_probability ?? 15}%</span>
-              </div>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 flex items-center justify-center">
-              <Droplets className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-
-        {/* Center Section: Farm Alerts & Advisories + Optimal Crops */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Farm Alerts & Advisories (5 cols) */}
-          <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center">
-                    <Bell className="w-4.5 h-4.5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-base">Farm Alerts &amp; Advisories</h3>
-                    <p className="text-[11px] text-slate-500 font-urdu">زرعی انتباہ اور مشورے</p>
-                  </div>
+        {/* Dashboard Grid Container */}
+        <main className="p-4 sm:p-8 space-y-6 max-w-7xl w-full mx-auto">
+          {/* Top Row: KPI Cards + Production Overview + Weather Card */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5">
+            {/* Left KPI Cards (4 cols on lg) */}
+            <div className="lg:col-span-3 space-y-4">
+              {/* Active Fields Card */}
+              <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between text-slate-500 text-xs font-medium mb-2">
+                  <span>Active Fields</span>
+                  <span className="inline-flex items-center text-[10px] text-emerald-700 bg-emerald-50 font-semibold px-2 py-0.5 rounded-full">
+                    +2 this week
+                  </span>
                 </div>
-                <span className="bg-amber-100 text-amber-900 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Active
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {alerts.map((alert, idx) => (
+                <div className="flex items-baseline space-x-2">
+                  <span className="text-3xl font-extrabold text-slate-900">{activeFields}</span>
+                  <span className="text-sm font-semibold text-slate-400">/{acres} Fields</span>
+                </div>
+                <div className="mt-3 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                   <div
-                    key={idx}
-                    className="p-3.5 rounded-xl bg-amber-50/70 border-l-4 border-l-amber-500 border border-amber-200/70 text-xs text-amber-950 flex items-start gap-2.5"
-                  >
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                    <div className="leading-relaxed font-medium">{alert}</div>
-                  </div>
-                ))}
+                    className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${(activeFields / acres) * 100}%` }}
+                  />
+                </div>
+              </div>
 
-                <div className="p-3.5 rounded-xl bg-emerald-50/70 border-l-4 border-l-emerald-600 border border-emerald-200/70 text-xs text-emerald-950 flex items-start gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
-                  <div className="leading-relaxed font-medium">
-                    <strong className="text-emerald-900">Pest Doctor Alert:</strong> Whitefly scouting active in cotton zones. Check 5 plants per acre twice weekly. Spray flonicamid if economic threshold is reached.
+              {/* Crop Health Status */}
+              <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between text-xs font-medium text-slate-500 mb-3">
+                  <span>Crop Health</span>
+                  <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold">
+                    Active
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded-xl bg-emerald-50/70 border border-emerald-100">
+                    <span className="text-lg font-bold text-emerald-700 block">92%</span>
+                    <span className="text-[10px] text-emerald-800 font-medium">Good</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-100">
+                    <span className="text-lg font-bold text-amber-700 block">8%</span>
+                    <span className="text-[10px] text-amber-800 font-medium">Fair</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-50 border border-slate-200">
+                    <span className="text-lg font-bold text-slate-400 block">0%</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Poor</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-500">Source: Punjab Agri Ext. &amp; Open-Meteo</span>
-              <Link
-                href="/weather"
-                className="text-xs font-bold text-emerald-800 hover:text-emerald-900 inline-flex items-center gap-1 group"
-              >
-                <span>Full Weather Forecast</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Optimal Crops for District (7 cols) */}
-          <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center">
-                    <Sprout className="w-4.5 h-4.5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-base">
-                      Optimal Crops for {district} ({season})
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-urdu">موزوں ترین فصلیں برائے ملتان</p>
-                  </div>
+            {/* Central Production Overview Module (5 cols on lg) */}
+            <div className="lg:col-span-5 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Production Overview</h3>
+                  <p className="text-xs text-slate-500">Seasonal harvest output telemetry</p>
                 </div>
-                <Link
-                  href="/crops"
-                  className="text-xs font-bold text-emerald-800 hover:text-emerald-900 inline-flex items-center gap-1 group"
-                >
-                  <span>Crop Advisor</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                <span className="text-xs bg-emerald-700 text-white font-semibold px-2.5 py-1 rounded-lg shadow-2xs">
+                  {harvestMetric.harvestedTons} Tons
+                </span>
+              </div>
+
+              {/* Semi-Circular Segmented SVG Gauge Chart */}
+              <div className="relative flex flex-col items-center justify-center my-2">
+                <svg viewBox="0 0 240 130" className="w-56 sm:w-64 h-auto overflow-visible">
+                  <defs>
+                    <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#22c55e" />
+                      <stop offset="50%" stopColor="#16a34a" />
+                      <stop offset="100%" stopColor="#15803d" />
+                    </linearGradient>
+                  </defs>
+                  {/* Gauge background track */}
+                  <path
+                    d="M 20 120 A 100 100 0 0 1 220 120"
+                    fill="none"
+                    stroke="#f1f5f9"
+                    strokeWidth="24"
+                    strokeLinecap="round"
+                  />
+                  {/* Gauge active fill track */}
+                  <path
+                    d="M 20 120 A 100 100 0 0 1 220 120"
+                    fill="none"
+                    stroke="url(#gaugeGradient)"
+                    strokeWidth="24"
+                    strokeDasharray="314.159"
+                    strokeDashoffset={314.159 * (1 - harvestMetric.percentage / 100)}
+                    strokeLinecap="round"
+                    className="transition-all duration-1000 ease-out"
+                  />
+                  {/* Visual tick marks */}
+                  <line x1="20" y1="120" x2="35" y2="120" stroke="#ffffff" strokeWidth="2" />
+                  <line x1="120" y1="20" x2="120" y2="35" stroke="#ffffff" strokeWidth="2" />
+                  <line x1="205" y1="120" x2="220" y2="120" stroke="#ffffff" strokeWidth="2" />
+                </svg>
+
+                {/* Central Gauge Text */}
+                <div className="text-center -mt-8">
+                  <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block">
+                    TOTAL HARVESTED
+                  </span>
+                  <div className="text-2xl sm:text-3xl font-black text-slate-900">
+                    {harvestMetric.percentage}% <span className="text-slate-400 font-semibold text-lg">/ {harvestMetric.harvestedTons} Tons</span>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Goal: {harvestMetric.goalTons} Tons
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Footer */}
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100">
+                <span>Pacing: On Track (+4.2%)</span>
+                <Link href="/crops" className="text-emerald-600 font-semibold hover:underline inline-flex items-center space-x-1">
+                  <span>View Breakdown</span>
+                  <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                {recommendedCrops.length > 0 ? (
-                  recommendedCrops.map((c, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-emerald-50/50 hover:border-emerald-300 transition-all flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                            {c.crop_name}
-                          </span>
-                          <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded">
-                            {c.suitability_score}% Match
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                          {c.reasoning || `High agro-zone suitability for ${district} soils.`}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 pt-2.5 border-t border-slate-200/80 text-xs space-y-1">
-                        <div className="flex justify-between text-slate-500">
-                          <span>Expected Yield:</span>
-                          <span className="font-bold text-slate-800">{c.expected_yield_maunds_per_acre} mnds/ac</span>
-                        </div>
-                        <div className="flex justify-between text-slate-500">
-                          <span>Water Need:</span>
-                          <span className="font-semibold text-blue-700">{c.water_requirement}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  [
-                    { name: 'Cotton (کپاس)', score: 94, yield: '28-34', water: 'Moderate-High', desc: 'Prime cotton belt suitability with high export lint quality.' },
-                    { name: 'Wheat (گندم)', score: 91, yield: '40-48', water: 'Canal 4-5 turns', desc: 'Guaranteed government support price with high yield potential.' },
-                    { name: 'Maize (مکئی)', score: 87, yield: '75-90', water: 'Regular irrigation', desc: 'Fast turnaround grain cycle with steady poultry demand.' },
-                  ].map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-emerald-50/50 hover:border-emerald-300 transition-all flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold text-slate-900">{item.name}</span>
-                          <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded">
-                            {item.score}% Match
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                          {item.desc}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 pt-2.5 border-t border-slate-200/80 text-xs space-y-1">
-                        <div className="flex justify-between text-slate-500">
-                          <span>Expected:</span>
-                          <span className="font-bold text-slate-800">{item.yield} mnds/ac</span>
-                        </div>
-                        <div className="flex justify-between text-slate-500">
-                          <span>Water:</span>
-                          <span className="font-semibold text-blue-700">{item.water}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex items-center justify-between">
-              <span>Soil: Sandy Loam to Clay Loam compatible</span>
-              <span className="text-emerald-800 font-medium">Punjab Agri Research Council (PARC)</span>
-            </div>
-          </div>
-        </div>
+            {/* Localized Weather Card (4 cols on lg) */}
+            <div className="lg:col-span-4 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    {weather?.district || district}, Punjab
+                  </span>
+                  <Link href="/weather" className="text-xs text-emerald-600 hover:underline flex items-center space-x-1">
+                    <span>Full Forecast</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
 
-        {/* Specialized Farm Services (Quick Actions Grid) */}
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-                <span>⚡ Specialized Farm Services</span>
-                <span className="font-urdu text-emerald-700 font-bold text-sm">(فوری زرعی خدمات)</span>
-              </h3>
-              <p className="text-xs text-slate-500">Grounded tools and multi-agent assistance for your farm</p>
-            </div>
-            <span className="text-xs text-slate-500 font-medium hidden sm:inline">6 Specialist Modules</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {quickActions.map((action, idx) => {
-              const Icon = action.icon;
-              return (
-                <Link
-                  key={idx}
-                  href={action.href}
-                  className="bg-white border border-slate-200 hover:border-emerald-400 hover:shadow-md p-5 rounded-2xl transition-all duration-200 group flex flex-col justify-between"
-                >
+                <div className="flex items-center justify-between mt-3">
                   <div>
-                    <div className="flex items-start justify-between mb-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${action.iconBg} group-hover:scale-105 transition-transform`}>
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${action.badgeColor}`}>
-                        {action.badge}
-                      </span>
+                    <div className="text-4xl font-extrabold text-slate-900 tracking-tight">
+                      {weather?.temperature ?? 33}°C
                     </div>
-
-                    <div className="flex items-baseline justify-between">
-                      <h4 className="font-bold text-slate-900 text-sm group-hover:text-emerald-800 transition-colors">
-                        {action.title}
-                      </h4>
-                      <span className="font-urdu text-xs text-emerald-700 font-semibold">{action.urdu}</span>
-                    </div>
-
-                    <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed">
-                      {action.desc}
+                    <p className="text-xs font-semibold text-slate-600 mt-1">
+                      {weather?.weather_condition || 'Partly Sunny'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      High {weather?.temp_max ?? 36}° / Low {weather?.temp_min ?? 24}°
                     </p>
                   </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-emerald-800 font-bold">
-                    <span>Open Module</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform text-emerald-700" />
+                  <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-500 shadow-2xs">
+                    <CloudSun className="w-9 h-9" />
                   </div>
-                </Link>
-              );
-            })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-4 mt-4 border-t border-slate-100">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Droplets className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-medium">Humidity</span>
+                    <span className="text-xs font-bold text-slate-800">{weather?.humidity ?? 45}%</span>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Wind className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-medium">Wind</span>
+                    <span className="text-xs font-bold text-slate-800">{weather?.wind_speed ?? 8} km/h</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </main>
+
+          {/* Middle Row: Crop Yield Analysis Line Chart + Structured Task Management */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Crop Yield Analysis Graph (7 cols on lg) */}
+            <div className="lg:col-span-7 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900">Crop Yield Analysis</h3>
+                  <p className="text-xs text-slate-500">Maunds per acre multi-crop performance</p>
+                </div>
+                <div className="flex items-center space-x-4">
+                  {/* Legend */}
+                  <div className="flex items-center space-x-3 text-xs">
+                    <span className="flex items-center space-x-1.5 font-medium text-slate-600">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                      <span>Cotton</span>
+                    </span>
+                    <span className="flex items-center space-x-1.5 font-medium text-slate-600">
+                      <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                      <span>Wheat</span>
+                    </span>
+                    <span className="flex items-center space-x-1.5 font-medium text-slate-600">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                      <span>Maize</span>
+                    </span>
+                  </div>
+
+                  {/* Year Dropdown */}
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 font-semibold text-slate-700 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+                  >
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Smooth Minimalist SVG Multi-Line Graph */}
+              <div className="w-full overflow-x-auto">
+                <svg viewBox="0 0 600 220" className="w-full h-52 sm:h-56">
+                  <defs>
+                    <linearGradient id="cottonGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#059669" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#059669" stopOpacity="0.0" />
+                    </linearGradient>
+                    <linearGradient id="wheatGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#22c55e" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#22c55e" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Grid lines */}
+                  <line x1="40" y1="30" x2="580" y2="30" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1="40" y1="80" x2="580" y2="80" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1="40" y1="130" x2="580" y2="130" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1="40" y1="180" x2="580" y2="180" stroke="#e2e8f0" strokeWidth="1" />
+
+                  {/* Y Axis Labels */}
+                  <text x="15" y="34" fill="#94a3b8" fontSize="10" fontWeight="500">200</text>
+                  <text x="15" y="84" fill="#94a3b8" fontSize="10" fontWeight="500">150</text>
+                  <text x="15" y="134" fill="#94a3b8" fontSize="10" fontWeight="500">100</text>
+                  <text x="25" y="184" fill="#94a3b8" fontSize="10" fontWeight="500">0</text>
+
+                  {/* Area fill for cotton */}
+                  <path
+                    d="M 50 180 C 100 170, 140 140, 190 145 C 240 150, 280 160, 330 110 C 380 60, 420 150, 470 120 C 520 90, 550 50, 570 40 L 570 180 Z"
+                    fill="url(#cottonGrad)"
+                  />
+
+                  {/* Cotton Line (Forest Green) */}
+                  <path
+                    d="M 50 180 C 100 170, 140 140, 190 145 C 240 150, 280 160, 330 110 C 380 60, 420 150, 470 120 C 520 90, 550 50, 570 40"
+                    fill="none"
+                    stroke="#059669"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  />
+
+                  {/* Wheat Line (Grass Green) */}
+                  <path
+                    d="M 50 180 C 100 150, 140 130, 190 110 C 240 90, 280 100, 330 140 C 380 120, 420 80, 470 70 C 520 60, 550 90, 570 85"
+                    fill="none"
+                    stroke="#22c55e"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  />
+
+                  {/* Maize Line (Amber) */}
+                  <path
+                    d="M 50 180 C 100 160, 140 150, 190 120 C 240 95, 280 120, 330 130 C 380 140, 420 110, 470 100 C 520 90, 550 105, 570 95"
+                    fill="none"
+                    stroke="#f59e0b"
+                    strokeWidth="2"
+                    strokeDasharray="4 4"
+                    strokeLinecap="round"
+                  />
+
+                  {/* X Axis Labels */}
+                  <text x="45" y="202" fill="#94a3b8" fontSize="10" fontWeight="500">Jan</text>
+                  <text x="95" y="202" fill="#94a3b8" fontSize="10" fontWeight="500">Feb</text>
+                  <text x="145" y="202" fill="#94a3b8" fontSize="10" fontWeight="500">Mar</text>
+                  <text x="195" y="202" fill="#94a3b8" fontSize="10" fontWeight="500">Apr</text>
+                  <text x="245" y="202" fill="#94a3b8" fontSize="10" fontWeight="500">May</text>
+                  <text x="295" y="202" fill="#94a3b8" fontSize="10" fontWeight="500">Jun</text>
+                  <text x="345" y="202" fill="#94a3b8" fontSize="10" fontWeight="500">Jul</text>
+                  <text x="395" y="202" fill="#94a3b8" fontSize="10" fontWeight="500">Aug</text>
+                  <text x="445" y="202" fill="#94a3b8" fontSize="10" fontWeight="500">Sep</text>
+                  <text x="495" y="202" fill="#94a3b8" fontSize="10" fontWeight="500">Oct</text>
+                  <text x="545" y="202" fill="#94a3b8" fontSize="10" fontWeight="500">Dec</text>
+                </svg>
+              </div>
+            </div>
+
+            {/* Structured Task Management List (5 cols on lg) */}
+            <div className="lg:col-span-5 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900">Task Management</h3>
+                    <p className="text-xs text-slate-500">Active agronomic field actions</p>
+                  </div>
+                  <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold">
+                    {tasks.length} Active
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {tasks.map((t) => {
+                    const TaskIcon = t.icon;
+                    return (
+                      <div
+                        key={t.id}
+                        className="p-3.5 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/50 hover:bg-slate-50 flex items-center justify-between transition-all"
+                      >
+                        <div className="flex items-center space-x-3 min-w-0">
+                          <div className={`w-9 h-9 rounded-xl ${t.iconBg} flex items-center justify-center flex-shrink-0 shadow-2xs`}>
+                            <TaskIcon className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-xs sm:text-sm font-bold text-slate-800 truncate">{t.title}</h4>
+                            <p className="text-[11px] text-slate-500 flex items-center space-x-1.5 mt-0.5 truncate">
+                              <span>{t.field}</span>
+                              <span>•</span>
+                              <span className={`px-1.5 py-0.2 rounded-md font-medium border text-[9px] ${t.priorityColor}`}>
+                                {t.priority}
+                              </span>
+                              <span>•</span>
+                              <span>{t.dueDate}</span>
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg border flex-shrink-0 ${t.statusColor}`}>
+                          {t.status}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs text-slate-400">8 High Priority Remaining</span>
+                <Link
+                  href="/crops"
+                  className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center space-x-1"
+                >
+                  <span>Manage All Tasks</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Row: Quick Access Suite Links */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link
+              href="/assistant"
+              className="group p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-emerald-300 transition-all flex items-center space-x-3.5"
+            >
+              <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Bot className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700">AI Crop Assistant</h4>
+                <p className="text-[11px] text-slate-500">Urdu & English voice bot</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/fertilizer"
+              className="group p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-emerald-300 transition-all flex items-center space-x-3.5"
+            >
+              <div className="w-11 h-11 rounded-xl bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Scale className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700">Fertilizer Calculator</h4>
+                <p className="text-[11px] text-slate-500">Soil deficit DAP & Urea</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/market"
+              className="group p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-emerald-300 transition-all flex items-center space-x-3.5"
+            >
+              <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700">Mandi Benchmark</h4>
+                <p className="text-[11px] text-slate-500">336 daily wholesale rates</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/schemes"
+              className="group p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-emerald-300 transition-all flex items-center space-x-3.5"
+            >
+              <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Landmark className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700">Govt Schemes</h4>
+                <p className="text-[11px] text-slate-500">Kisan Card & Subsidies</p>
+              </div>
+            </Link>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
