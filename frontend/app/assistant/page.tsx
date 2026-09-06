@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { loadSavedItem, saveItem } from '@/lib/storage';
+import { API_BASE_URL } from '@/lib/api';
 
 interface Message {
   id: string;
@@ -123,8 +124,7 @@ export default function AssistantPage() {
     }, 600);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-      const res = await fetch(`${apiUrl}/api/chat`, {
+      const res = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

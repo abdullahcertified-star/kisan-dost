@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { loadSavedItem } from '@/lib/storage';
+import { API_BASE_URL } from '@/lib/api';
 import {
   Sprout,
   Bot,
@@ -84,7 +85,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+      const apiUrl = API_BASE_URL;
 
       try {
         // 1. Fetch Real Weather Data

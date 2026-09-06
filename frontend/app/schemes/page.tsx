@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
+import { API_BASE_URL } from '@/lib/api';
 import {
   Landmark,
   ShieldCheck,
@@ -60,7 +61,7 @@ export default function GovtSchemesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+      const apiUrl = API_BASE_URL;
       const params = new URLSearchParams();
       if (province && province !== 'All') params.append('province', province);
       if (district && district !== 'All') params.append('district', district);

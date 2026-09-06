@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
+import { API_BASE_URL } from '@/lib/api';
 import {
   Activity,
   ShieldCheck,
@@ -71,7 +72,7 @@ export default function ObservabilityPage() {
 
   const fetchObservabilityData = async () => {
     setIsLoading(true);
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+    const apiUrl = API_BASE_URL;
     try {
       const [tracesRes, summaryRes] = await Promise.all([
         fetch(`${apiUrl}/api/observability/traces?limit=25`),
@@ -104,7 +105,7 @@ export default function ObservabilityPage() {
 
   const runJudgeTest = async (queryToRun: string) => {
     setIsExecutingTest(true);
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+    const apiUrl = API_BASE_URL;
     try {
       const res = await fetch(`${apiUrl}/api/chat`, {
         method: 'POST',

@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-3.6-flash"
     
     # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///./kisan_dost.db"
+    DATABASE_URL: str = "sqlite+aiosqlite:////tmp/kisan_dost.db" if os.environ.get("VERCEL") else "sqlite+aiosqlite:///./kisan_dost.db"
     
     # CORS
     CORS_ORIGINS: List[str] = [
