@@ -1,0 +1,698 @@
+[
+  {
+    "id": "cotton_whitefly",
+    "crop": "Cotton",
+    "target_crops": ["cotton", "tomato", "chilli", "okra", "vegetables"],
+    "pest_name": "Whitefly (سفید مکھی)",
+    "pest_name_ur": "سفید مکھی",
+    "scientific_name": "Bemisia tabaci",
+    "category": "Insect Pest (رس چوسنے والا کیڑا)",
+    "symptoms": [
+      "Yellowing and upward curling of upper leaves",
+      "Tiny white moth-like flies fluttering when foliage is shaken",
+      "Sticky shiny honeydew secretion on leaf surface",
+      "Black sooty mold (سیاہ الی) covering foliage and reducing photosynthesis",
+      "Stunted plant growth and reduced boll formation"
+    ],
+    "symptoms_ur": [
+      "پتوں کا اوپر کی طرف مڑنا اور زرد پڑنا",
+      "پودا ہلانے پر سفید رنگ کی چھوٹی مکھیاں اڑنا",
+      "پتوں کی نچلی سطح پر چپچپا لیس دار مادہ (ہنی ڈیو)",
+      "پتوں پر کالی پھپھوند (سیاہ الی) جم جانا",
+      "پودے کا قد رک جانا اور ٹینڈے کم بننا"
+    ],
+    "risk_factors": [
+      "Hot and dry weather followed by intermittent humid spells (30-38°C)",
+      "Excessive nitrogenous fertilizer applications",
+      "Presence of alternate weed hosts (Itsit, Peeli Buti, Kanghi Buti)",
+      "Dense plant population with poor air circulation"
+    ],
+    "non_chemical_management": [
+      "Install yellow sticky traps (10-12 traps per acre) at canopy level for monitoring and trapping",
+      "Spray 5% neem seed kernel extract (NSKE) or neem oil at early pest appearance",
+      "Eradicate broadleaf weed hosts around water channels and field borders",
+      "Conserve natural predators such as ladybird beetles, lacewings (Chrysoperla), and Geocoris bugs",
+      "Avoid early-season broad-spectrum synthetic pyrethroids which flare up whitefly populations"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Diafenthiuron 500 SC / Pyriproxyfen 10.8 EC",
+      "trade_names": ["Polo 500 SC", "Prior 10.8 EC", "Danitol", "Cascade"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "250 ml/acre (Diafenthiuron) or 400 ml/acre (Pyriproxyfen)",
+      "dosage_numeric_ml_per_acre": 250.0,
+      "water_volume_liters_per_acre": 100,
+      "spray_timing": "Early morning or late afternoon with hollow cone nozzle",
+      "application_instructions": "Ensure complete spray coverage on the underside of leaves where nymphs and adults congregate. Alternate chemical classes to prevent resistance.",
+      "source": "Directorate General of Agriculture Extension & Adaptive Research Punjab (Pest Warning Wing)"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 14 days before cotton picking.",
+      "Wear full personal protective equipment (PPE): chemical-resistant gloves, face mask, and eye goggles.",
+      "Highly toxic to bees and aquatic organisms; do not spray when honeybees are actively foraging or near water channels."
+    ],
+    "phi_days": 14
+  },
+  {
+    "id": "cotton_pink_bollworm",
+    "crop": "Cotton",
+    "target_crops": ["cotton"],
+    "pest_name": "Pink Bollworm (گلابی سنڈی)",
+    "pest_name_ur": "گلابی سنڈی",
+    "scientific_name": "Pectinophora gossypiella",
+    "category": "Insect Pest (ٹینڈے کی سنڈی)",
+    "symptoms": [
+      "Rosetted flowers (گلاب جیسا پھول) that fail to open normally",
+      "Tiny pinhead entry holes on young bolls with no exit frass initially",
+      "Premature opening of defective bolls (کھلے ادھورے ٹینڈے)",
+      "Damaged and stained cotton lint with eaten seeds inside bolls",
+      "Presence of small pinkish caterpillars inside dissected green bolls"
+    ],
+    "symptoms_ur": [
+      "پھول کا گلاب کی طرح بند رہنا (روزیٹڈ پھول)",
+      "نرم ٹینڈوں پر سوئی کے ناکے جتنے باریک سوراخ",
+      "ٹینڈوں کا قبل از وقت بد وضع کھلنا",
+      "ٹینڈے کے اندر روئی کا خراب ہونا اور بیج کھایا جانا",
+      "ٹینڈے توڑنے پر اندر گلابی رنگ کی سنڈی کی موجودگی"
+    ],
+    "risk_factors": [
+      "Late-sown or prolonged cotton ratoon crops",
+      "Unshredded cotton sticks stored in heaps near fields",
+      "High humidity and moderate warm temperatures (28-34°C)",
+      "Monoculture cotton without crop rotation"
+    ],
+    "non_chemical_management": [
+      "Install PB-Rope L or sex pheromone Delta traps (5-8 traps/acre) 45 days after sowing",
+      "Release egg parasitoid Trichogramma chilonis cards (2-3 cards/acre weekly during flowering)",
+      "Shred and bury cotton stubbles after harvest; never store unchopped sticks near fields",
+      "Avoid planting unauthorized or unapproved seed varieties lacking verified bollworm protection"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Chlorantraniliprole 20 SC or Spinetoram 11.7 SC",
+      "trade_names": ["Coragen 20 SC", "Radiant 11.7 SC", "Belt 480 SC"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "60 ml/acre (Coragen 20 SC) or 100 ml/acre (Radiant 11.7 SC)",
+      "dosage_numeric_ml_per_acre": 60.0,
+      "water_volume_liters_per_acre": 120,
+      "spray_timing": "At 5% economic threshold level (ETL) of infested bolls/flowers in evening hours",
+      "application_instructions": "Direct spray nozzles towards squares, flowers, and developing bolls. Rotate chemistry with Triazophos or Emamectin benzoate.",
+      "source": "Central Cotton Research Institute (CCRI) Multan & Punjab Pest Warning"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 21 days.",
+      "Do not allow livestock or farm animals to graze on sprayed field stalks.",
+      "Thoroughly clean sprayer nozzles and discard rinse water away from domestic wells."
+    ],
+    "phi_days": 21
+  },
+  {
+    "id": "cotton_clcuv",
+    "crop": "Cotton",
+    "target_crops": ["cotton"],
+    "pest_name": "Cotton Leaf Curl Virus - CLCuV (کپاس کا پتا مروڑ وائرس)",
+    "pest_name_ur": "پتا مروڑ وائرس",
+    "scientific_name": "Begomovirus (transmitted by Bemisia tabaci)",
+    "category": "Viral Disease (وائرل بیماری)",
+    "symptoms": [
+      "Upward or downward leaf cupping and curling",
+      "Thickening and darkening of leaf veins (رگوں کا موٹا ہونا)",
+      "Enations: small leaf-like outgrowths on the underside of major veins",
+      "Severely stunted internodes, bushy growth, and drop of squares/bolls"
+    ],
+    "symptoms_ur": [
+      "پتوں کے کناروں کا اوپر یا نیچے کی طرف مڑ جانا",
+      "پتوں کی رگوں کا موٹا، ابھرا ہوا اور گہرا سبز ہو جانا",
+      "پتے کی نچلی سطح پر چھوٹا پتہ نما ابھار (اینیشن) بننا",
+      "پودے کا قد چھوٹا رہ جانا اور پھل گودا گر جانا"
+    ],
+    "risk_factors": [
+      "High whitefly vector population in early vegetative stages (May to July)",
+      "Cultivation of susceptible non-certified varieties",
+      "Presence of weed hosts (Solanum nigrum, Parthenium, Convolvulus)"
+    ],
+    "non_chemical_management": [
+      "Sow certified tolerant varieties recommended by Punjab Agriculture Dept (e.g., CIM-663, IUB-2013, MNH-1020)",
+      "Rogue out and bury virus-infected plants during first 30-40 days of growth",
+      "Maintain optimal balanced nutrition with Zinc sulphate (5 kg/acre) and Boron (300 g/acre) to build plant vigor",
+      "Keep field borders clean of perennial solanaceous weeds"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Vector control: Pyriproxyfen 10.8 EC + Acetamiprid 20 SP",
+      "trade_names": ["Prior", "Mospilan 20 SP", "Oshin 20 SG"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "250 ml Pyriproxyfen + 125 g Acetamiprid per acre",
+      "dosage_numeric_ml_per_acre": 250.0,
+      "water_volume_liters_per_acre": 100,
+      "spray_timing": "Immediately upon spotting whitefly vector before virus spread",
+      "application_instructions": "CLCuV is a virus; chemical sprays cannot cure viral infection directly. Sprays must target the whitefly insect vector to prevent transmission.",
+      "source": "Cotton Research Station Multan & PARC Entomology Division"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 14 days.",
+      "Never spray antibiotics or fungicides for viral diseases; they are completely ineffective.",
+      "Wear protective apron and face shield during vector pesticide preparation."
+    ],
+    "phi_days": 14
+  },
+  {
+    "id": "cotton_jassid",
+    "crop": "Cotton",
+    "target_crops": ["cotton", "okra", "potato", "vegetables"],
+    "pest_name": "Jassid / Green Leafhopper (سبز تیلا)",
+    "pest_name_ur": "سبز تیلا",
+    "scientific_name": "Amrasca biguttula",
+    "category": "Insect Pest (رس چوسنے والا کیڑا)",
+    "symptoms": [
+      "Downward curling of leaf margins (اندر کی طرف مڑے ہوئے پتے)",
+      "Yellowing followed by reddish-brown marginal necrosis ('hopper burn')",
+      "Tiny pale green wedge-shaped insects moving sideways rapidly on leaf underside",
+      "Crinkled, brittle, and dry leaves in heavy infestation"
+    ],
+    "symptoms_ur": [
+      "پتوں کے کناروں کا نیچے کی طرف مڑنا",
+      "پتوں کے کناروں کا زرد اور پھر سرخ بھورا ہو کر جل جانا (ہوپر برن)",
+      "پتے کی نچلی طرف ترچھے چلنے والے باریک سبز کیڑے",
+      "پتوں کا سوکھ کر پاپڑ بن جانا"
+    ],
+    "risk_factors": [
+      "Humid, cloudy weather and monsoon spells (July - September)",
+      "Dense canopy with poor drainage",
+      "Varieties with glabrous (hairless) leaf surfaces"
+    ],
+    "non_chemical_management": [
+      "Select hairy (pubescent) cotton cultivars which deter jassid feeding",
+      "Avoid excessive irrigation causing high micro-climate humidity",
+      "Spray 5% neem extract or encourage natural predators like geocoris and spiders",
+      "Apply balanced potassium fertilizer (SOP) to reinforce leaf cell walls"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Flonicamid 50 WG or Dinotefuran 20 SG",
+      "trade_names": ["Ulala 50 WG", "Oshin 20 SG", "Confidor 200 SL"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "60 g/acre (Flonicamid 50 WG) or 100 g/acre (Dinotefuran 20 SG)",
+      "dosage_numeric_ml_per_acre": 60.0,
+      "water_volume_liters_per_acre": 100,
+      "spray_timing": "When economic threshold of 1-2 jassids per leaf is reached",
+      "application_instructions": "Spray with fine mist ensuring coverage of middle and lower canopy leaves where jassids feed.",
+      "source": "Punjab Pest Warning & Quality Control of Pesticides"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 14 days.",
+      "Do not combine with strongly alkaline foliar fertilizers.",
+      "Wear gloves and keep children/animals away from sprayed fields."
+    ],
+    "phi_days": 14
+  },
+  {
+    "id": "wheat_stripe_rust",
+    "crop": "Wheat",
+    "target_crops": ["wheat", "barley"],
+    "pest_name": "Stripe Rust / Yellow Rust (گندم کی زرد کنگی)",
+    "pest_name_ur": "زرد کنگی",
+    "scientific_name": "Puccinia striiformis f. sp. tritici",
+    "category": "Fungal Disease (پھپھوندی بیماری)",
+    "symptoms": [
+      "Bright yellow to orange-yellow powdery pustules arranged in parallel linear stripes along leaf veins",
+      "Yellow powder staining fingers and clothing when walking through the field",
+      "Drying and chlorosis of infected leaves starting from lower to flag leaf",
+      "Shrivelled grains and poor ear emergence in severe attacks"
+    ],
+    "symptoms_ur": [
+      "پتوں پر زرد رنگ کی دھاریاں جن میں ہلدی جیسا پاؤڈر بھرا ہوتا ہے",
+      "کھیت میں چلنے پر کپڑوں یا انگلیوں پر پیلا پاؤڈر لگ جانا",
+      "پتوں کا زرد ہو کر سوکھنا، خاص طور پر جھنڈے والے پتے (فلیگ لیف) کا متاثر ہونا",
+      "سٹوں میں دانے کا سکڑ جانا اور پیداوار میں شدید کمی"
+    ],
+    "risk_factors": [
+      "Cool temperatures (10-18°C) with persistent fog, high humidity, or dew",
+      "Overcast and rainy days during January - March in Punjab and KPK",
+      "Susceptible obsolete wheat varieties (e.g., Sehar-06, Faisalabad-08)",
+      "Over-application of urea and late sowing"
+    ],
+    "non_chemical_management": [
+      "Cultivate officially certified rust-resistant wheat varieties (e.g., Akbar-19, Dilkash-20, Subhani-21, Ghazi-19, Fakhar-e-Bhakkar)",
+      "Complete sowing within optimal window (November 1 to November 25)",
+      "Avoid excessive late nitrogen fertilization; ensure balanced potash (SOP) application",
+      "Survey fields weekly during January and February for early yellow foci ('hotspots')"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Tebuconazole 250 EC or Propiconazole 25 EC",
+      "trade_names": ["Folicur 250 EC", "Tilt 250 EC", "Nativo 75 WG"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "200 ml/acre (Tebuconazole / Tilt) or 65 g/acre (Nativo 75 WG)",
+      "dosage_numeric_ml_per_acre": 200.0,
+      "water_volume_liters_per_acre": 100,
+      "spray_timing": "At first appearance of localized yellow pustules on leaves before widespread infection",
+      "application_instructions": "Ensure uniform spray mist on both upper and lower leaf surfaces. Repeat after 14 days only if severe cool-wet weather persists.",
+      "source": "Wheat Research Institute Faisalabad & PARC Rust Surveillance Program"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 30 days before wheat harvesting.",
+      "Do not graze milch cattle or sheep on treated green wheat fodder for at least 15 days.",
+      "Wear protective mask and rubber gloves; avoid spraying against the wind."
+    ],
+    "phi_days": 30
+  },
+  {
+    "id": "wheat_aphid",
+    "crop": "Wheat",
+    "target_crops": ["wheat", "barley", "mustard"],
+    "pest_name": "Wheat Aphid / Chepa (گندم کا سست تیلا)",
+    "pest_name_ur": "سست تیلا",
+    "scientific_name": "Rhopalosiphum padi / Sitobion avenae",
+    "category": "Insect Pest (رس چوسنے والا کیڑا)",
+    "symptoms": [
+      "Colonies of tiny green or black wingless insects clustered on wheat stems, ears, and flag leaves",
+      "Sticky honeydew causing black sooty mold on developing wheat ears",
+      "Premature yellowing of leaves and reduced grain weight (shrivelled kernels)",
+      "Weakened tillers during grain filling stage (February - March)"
+    ],
+    "symptoms_ur": [
+      "سٹوں اور پتوں پر ہرے اور کالے رنگ کے ننھے کیڑوں کا جمگھٹا",
+      "سٹوں پر چپچپا لیس دار مادہ اور کالی پھپھوند کا جمنا",
+      "دانوں کا چھوٹا اور پچکا رہ جانا",
+      "فروری اور مارچ میں پودوں کا قبل از وقت پیلا پڑ جانا"
+    ],
+    "risk_factors": [
+      "Dry, cloudy, and warm weather during February and March",
+      "High doses of nitrogenous fertilizers producing lush succulent growth",
+      "Absence or destruction of natural bio-agents like ladybird beetles"
+    ],
+    "non_chemical_management": [
+      "Conserve ladybird beetles (Coccinella septempunctata), syrphid flies, and chrysoperla predators",
+      "Apply light water spray or neem seed extract (5%) on borders to dislodge colonies",
+      "Avoid late nitrogen top-dressing after heading stage",
+      "Irrigate fields timely; water-stressed wheat is more susceptible to aphid multiplication"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Flonicamid 50 WG or Imidacloprid 200 SL",
+      "trade_names": ["Ulala 50 WG", "Confidor 200 SL", "Advantage 20 EC"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "60 g/acre (Flonicamid 50 WG) or 60 ml/acre (Imidacloprid 200 SL)",
+      "dosage_numeric_ml_per_acre": 60.0,
+      "water_volume_liters_per_acre": 100,
+      "spray_timing": "Only when economic threshold of 15-20 aphids per earhead is crossed",
+      "application_instructions": "Direct spray towards wheat ears and flag leaves. Use hollow cone nozzles. Do NOT spray if natural predator ladybird beetles are abundant.",
+      "source": "Directorate General of Pest Warning & Quality Control of Pesticides Punjab"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 21 days.",
+      "Extremely toxic to honeybees. NEVER spray during morning hours when pollinators are active.",
+      "Do not feed sprayed wheat straw or green fodder to animals within 21 days."
+    ],
+    "phi_days": 21
+  },
+  {
+    "id": "wheat_loose_smut",
+    "crop": "Wheat",
+    "target_crops": ["wheat"],
+    "pest_name": "Loose Smut (گندم کا کنگی / کالا سٹا)",
+    "pest_name_ur": "کالا سٹا / لوز سمٹ",
+    "scientific_name": "Ustilago tritici",
+    "category": "Fungal Disease (بیج سے پیدا ہونے والی پھپھوندی)",
+    "symptoms": [
+      "Entire wheat earhead converted into a loose black powdery mass of fungal spores",
+      "Black powder blowing away in wind, leaving only the bare central rachis (خالی ڈنڈی)",
+      "Infected ears emerging earlier than healthy heads",
+      "Clean leaves and stems, with disease manifesting only upon ear emergence"
+    ],
+    "symptoms_ur": [
+      "گندم کا پورا سٹا کوئلے جیسے کالے سفوف میں تبدیل ہو جانا",
+      "ہوا چلنے پر کالا پاؤڈر اڑ جانا اور صرف سوکھی ڈنڈی باقی رہ جانا",
+      "متاثرہ سٹے صحت مند سٹوں سے پہلے نکل آنا",
+      "پودے کے پتے صاف دکھائی دینا مگر سٹا کالا نکلنا"
+    ],
+    "risk_factors": [
+      "Use of uncertified farmer-saved seeds from previously infected fields",
+      "Humid and cloudy weather during flowering stage of the previous crop",
+      "Planting untreated seed without systemic fungicide coating"
+    ],
+    "non_chemical_management": [
+      "Solar seed treatment (سولر طریقہ علاج): Soak seed in water for 4-5 hours on a bright sunny summer day (June), then spread thinly on cloth under hot sun to dry",
+      "Procure certified seed from Punjab Seed Corporation (PSC) or registered seed companies",
+      "Carefully pull out black smutted ears in a plastic bag before spores disperse and bury them deeply",
+      "Do not save seed from a field showing even 1% loose smut infestation"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Seed Treatment: Difenoconazole 30 FS or Tebuconazole 60 FS",
+      "trade_names": ["Dividend 30 FS", "Raxil 60 FS", "Homai 80 WP"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "2.0 ml per kg of seed (Difenoconazole) or 2.5 g per kg of seed (Homai)",
+      "dosage_numeric_ml_per_acre": 100.0,
+      "water_volume_liters_per_acre": 0,
+      "spray_timing": "Pre-sowing seed dressing only; foliar spray in standing crop is totally ineffective",
+      "application_instructions": "Mix the recommended fungicide in 1 liter of water per 50 kg seed bag, coat thoroughly so every grain is treated, dry in shade, and sow immediately.",
+      "source": "Punjab Seed Corporation & Wheat Research Institute"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): Seed treatment only (Not applicable to foliar).",
+      "Treated seed is POISONOUS. Never use treated seed for human consumption, flour milling, or poultry feed.",
+      "Wear rubber gloves and dust mask during seed treatment."
+    ],
+    "phi_days": 0
+  },
+  {
+    "id": "rice_blast",
+    "crop": "Rice",
+    "target_crops": ["rice"],
+    "pest_name": "Rice Blast & Neck Blast (دھان کا جھلساؤ اور گردن توڑ)",
+    "pest_name_ur": "دھان کا جھلساؤ / گردن توڑ",
+    "scientific_name": "Magnaporthe oryzae",
+    "category": "Fungal Disease (پھپھوندی بیماری)",
+    "symptoms": [
+      "Diamond or spindle-shaped lesions on leaves with gray-white centers and dark reddish-brown margins",
+      "Lesions coalescing causing complete leaf drying and burnt appearance",
+      "Neck blast: Blackish necrotic lesion at panicle base causing neck breakage (گردن ٹوٹ جانا)",
+      "White, unfilled, erect panicles ('white heads' without grain weight)"
+    ],
+    "symptoms_ur": [
+      "پتوں پر آنکھ یا تکونی شکل کے دھبے جن کا درمیان سفید سرمئی اور کنارے کتھئی ہوں",
+      "دھبوں کا آپس میں مل کر پورے پتے کا جھلس جانا",
+      "سٹے کی گردن کالی ہو کر ٹوٹ جانا (گردن توڑ)",
+      "سٹوں کا سفید، خالی اور بغیر دانے کے کھڑے رہ جانا"
+    ],
+    "risk_factors": [
+      "High relative humidity (>90%) with prolonged dew periods and moderate temperatures (20-28°C)",
+      "Excessive nitrogen application (heavy urea doses)",
+      "Cultivation of susceptible aromatic varieties like Super Basmati under dense spacing",
+      "Intermittent drought stress followed by flooding"
+    ],
+    "non_chemical_management": [
+      "Treat nursery seed before sowing with fungicide",
+      "Split nitrogen doses into 3 equal applications; never apply urea late after panicle initiation",
+      "Maintain continuous shallow water depth (2-3 inches) in fields to reduce disease severity",
+      "Burn or plow down infected stubbles after harvest to destroy overwintering mycelium"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Tricyclazole 75 WP or Kasugamycin 2% SL",
+      "trade_names": ["Beam 75 WP", "Kasumin 2% SL", "Nativo 75 WG"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "120 g/acre (Tricyclazole 75 WP) or 250 ml/acre (Kasumin)",
+      "dosage_numeric_ml_per_acre": 120.0,
+      "water_volume_liters_per_acre": 100,
+      "spray_timing": "Preventative spray at late boot stage and repeated at 10% panicle emergence",
+      "application_instructions": "Ensure thorough coverage of both foliage and panicle neck. Spray during calm morning hours with mist nozzle.",
+      "source": "Rice Research Institute Kala Shah Kaku & PARC Rice Program"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 21 days.",
+      "Do not drain spray runoff water into fish farms, poultry ponds, or drinking canals.",
+      "Wear waterproof boots, apron, and gloves during spraying in paddy water."
+    ],
+    "phi_days": 21
+  },
+  {
+    "id": "rice_stem_borer",
+    "crop": "Rice",
+    "target_crops": ["rice"],
+    "pest_name": "Rice Stem Borer (دھان کے تنے کی سنڈی)",
+    "pest_name_ur": "تنے کی سنڈی",
+    "scientific_name": "Scirpophaga incertulas / Scirpophaga innotata",
+    "category": "Insect Pest (تنے میں سوراخ کرنے والی سنڈی)",
+    "symptoms": [
+      "Dead heart (ڈیڈ ہارٹ): Central shoot of young tiller dries up and can be easily pulled out",
+      "White head (سفید سٹا): Panicles dry, turn completely white, and remain devoid of grain at reproductive stage",
+      "Bore holes near water level on stems with yellowish frass inside",
+      "Larvae feeding inside the hollow stem causing tiller death"
+    ],
+    "symptoms_ur": [
+      "ڈیڈ ہارٹ: پودے کی درمیانی کونپل سوکھ جانا اور کھینچنے پر آسانی سے نکل آنا",
+      "سفید سٹا: سٹے کا سفید اور خالی نکلنا جس میں دانے نہ بنیں",
+      "پودے کے نچلے حصے میں تنے پر سوراخ اور اندر سنڈی کا فضلہ",
+      "تنے کو اندر سے کھوکھلا کر دینا"
+    ],
+    "risk_factors": [
+      "Late transplanting of paddy nursery after July 15",
+      "Stubbles left in the field after mechanical harvesting without deep plowing",
+      "Continuous cloudy, humid monsoon weather",
+      "Stagnant water without drainage"
+    ],
+    "non_chemical_management": [
+      "Clip the top tips of nursery seedlings before transplanting to remove borer egg masses",
+      "Install pheromone traps (4-5 traps/acre) to monitor moth flights and time applications",
+      "Plow fields deeply with disc/mouldboard plow immediately after harvest and irrigate to drown hibernating larvae in stubbles",
+      "Encourage biological control agents like Trichogramma wasps and spiders in the paddy ecosystem"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Cartap Hydrochloride 4G or Fipronil 0.3G / Chlorantraniliprole 0.4G",
+      "trade_names": ["Padan 4G", "Refree 0.3G", "Ferterra 0.4G", "Sunpyrole 4G"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "9 kg/acre (Padan 4G) or 4 kg/acre (Ferterra 0.4G)",
+      "dosage_numeric_ml_per_acre": 9000.0,
+      "water_volume_liters_per_acre": 0,
+      "spray_timing": "Broadcast granular application in standing water 25-30 days and 50 days after transplanting",
+      "application_instructions": "Maintain 2-3 inches of standing water in the paddy field for 4-5 days after broadcasting granules to ensure systemic uptake by roots.",
+      "source": "Rice Research Institute Punjab & Federal Plant Protection Department"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 28 days.",
+      "Extremely hazardous to fish, frogs, and aquatic life. Do not discharge paddy water into natural water bodies.",
+      "Wear rubber gloves and boots when broadcasting granular formulations; never handle with bare hands."
+    ],
+    "phi_days": 28
+  },
+  {
+    "id": "rice_bacterial_blight",
+    "crop": "Rice",
+    "target_crops": ["rice"],
+    "pest_name": "Bacterial Leaf Blight - BLB (دھان کا بیکٹیریل بلائٹ)",
+    "pest_name_ur": "بیکٹیریل بلائٹ",
+    "scientific_name": "Xanthomonas oryzae pv. oryzae",
+    "category": "Bacterial Disease (بیکٹیریا کی بیماری)",
+    "symptoms": [
+      "Water-soaked yellowish-green stripes on leaf margins starting near leaf tips",
+      "Wavy or undulating margins along lesions progressing downwards",
+      "Lesions turning grayish-white with milky bacterial ooze beads in early morning",
+      "Kresek symptom in young plants: entire seedling wilts, rolls, and dies"
+    ],
+    "symptoms_ur": [
+      "پتے کے کناروں سے شروع ہونے والی زرد سبزی مائل لہراتی دھاریاں",
+      "دھاریوں کا بڑھ کر پتے کا اوپر سے نیچے تک خشک اور سفید ہو جانا",
+      "صبح کے وقت پتوں پر بیکٹیریا کے قطرے (اووز) نظر آنا",
+      "شدید حملے میں پودے کا سوکھ جانا"
+    ],
+    "risk_factors": [
+      "Severe storms, rain accompanied by strong winds which create leaf micro-wounds",
+      "Deep standing water and high nitrogen fertilizer levels",
+      "High temperatures (25-34°C) with 70-85% humidity during monsoon"
+    ],
+    "non_chemical_management": [
+      "Drain standing water from infected fields for 2-3 days to halt bacterial spread",
+      "Immediately withhold further urea or nitrogen top-dressing; apply Muriate of Potash or SOP (15-20 kg/acre)",
+      "Avoid handling or working in paddy fields while foliage is wet to prevent mechanical transmission",
+      "Select certified BLB-tolerant cultivars like KSK-133 or Basmati-515"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Copper Hydroxide 77 WP or Bismerthiazol 20 WP",
+      "trade_names": ["Kocide 2000", "Champion 77 WP", "Saaf 20 WP"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "250 g/acre (Copper Hydroxide) or 200 g/acre (Bismerthiazol)",
+      "dosage_numeric_ml_per_acre": 250.0,
+      "water_volume_liters_per_acre": 100,
+      "spray_timing": "At initial onset of wavy marginal leaf lesions before whole canopy turns straw-colored",
+      "application_instructions": "Ensure clean spray water. Copper bactericides act as protective barriers; repeat spray after 10-12 days if strong rainstorms continue.",
+      "source": "Directorate of Rice Research & PARC Crop Diseases Research Institute"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 14 days.",
+      "Do not mix copper formulations with organophosphates or acidic chemicals.",
+      "Wear protective eyewear to avoid copper dust irritation."
+    ],
+    "phi_days": 14
+  },
+  {
+    "id": "maize_fall_armyworm",
+    "crop": "Maize",
+    "target_crops": ["maize", "sorghum", "sugarcane"],
+    "pest_name": "Fall Armyworm (مکئی کا فال آرمی ورم)",
+    "pest_name_ur": "فال آرمی ورم",
+    "scientific_name": "Spodoptera frugiperda",
+    "category": "Insect Pest (لشکری سنڈی)",
+    "symptoms": [
+      "Large ragged irregular holes in maize leaves with extensive sawdust-like frass (گوبر جیسا فضلہ)",
+      "Central whorl severely chewed, ragged, and hollowed out",
+      "Larvae having an inverted white 'Y' mark on the head capsule and 4 dark spots arranged in a square on the 8th abdominal segment",
+      "Damage extending into young developing corn cobs and silk"
+    ],
+    "symptoms_ur": [
+      "پتوں میں بڑے بے ڈھنگے سوراخ اور لکڑی کے برادے جیسا فضلہ",
+      "مکئی کی گوبھ کا اندر سے بری طرح کھایا جانا",
+      "سنڈی کے سر پر الٹے 'Y' کا سفید نشان اور دم کے قریب چار کالے نقطے",
+      "چھلی کے دانوں اور بالوں کو کھا جانا"
+    ],
+    "risk_factors": [
+      "Continuous, staggered maize plantings throughout spring, summer, and autumn",
+      "Warm temperatures (25-32°C) without heavy rains",
+      "Late sown crops adjacent to older infested fields"
+    ],
+    "non_chemical_management": [
+      "Hand-pick and crush egg masses and young larvae during early crop establishment (first 2-4 weeks)",
+      "Apply dry sand or wood ash mixed with chili powder into the central whorl of attacked plants",
+      "Install sex pheromone lure traps (5 traps/acre) for monitoring adult moths",
+      "Spray Bacillus thuringiensis (Bt) formulations (2 g/liter) or Metarhizium anisopliae bio-fungicides"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Emamectin Benzoate 1.9 EC or Chlorantraniliprole 20 SC",
+      "trade_names": ["Proclaim 1.9 EC", "Coragen 20 SC", "Match 50 EC"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "200 ml/acre (Proclaim 1.9 EC) or 60 ml/acre (Coragen 20 SC)",
+      "dosage_numeric_ml_per_acre": 200.0,
+      "water_volume_liters_per_acre": 120,
+      "spray_timing": "Early morning or late evening directing spray cone directly into the plant whorl (گوبھ کے اندر)",
+      "application_instructions": "Must direct the spray nozzle straight down into the leaf whorl so the chemical penetrates where larvae shelter. Flat fan broadcast spray is ineffective.",
+      "source": "CABI Pakistan & Maize and Millets Research Institute (MMRI) Yusafwala"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 14 days for green cobs; 21 days for grain.",
+      "Do not feed treated maize plants as green fodder to dairy cattle within 14 days.",
+      "Always wear rubber gloves, face mask, and eye goggles."
+    ],
+    "phi_days": 14
+  },
+  {
+    "id": "potato_late_blight",
+    "crop": "Vegetables",
+    "target_crops": ["potato", "tomato", "vegetables"],
+    "pest_name": "Potato Late Blight (آلو کا پچھیتا جھلساؤ)",
+    "pest_name_ur": "آلو کا پچھیتا جھلساؤ",
+    "scientific_name": "Phytophthora infestans",
+    "category": "Fungal Disease (پھپھوندی نما جراثیم)",
+    "symptoms": [
+      "Water-soaked irregular dark green to blackish lesions on leaves and stems",
+      "White cottony or powdery fungal growth on the underside of lesions during humid early mornings",
+      "Rapid blighting, blackening, and foul odor of the entire potato foliage within 48-72 hours",
+      "Brownish dry rot with granular texture under the skin of infected potato tubers"
+    ],
+    "symptoms_ur": [
+      "پتوں اور تنوں پر پانی سے بھیگے ہوئے کالے یا گہرے سبز دھبے",
+      "صبح سویرے نمی کے وقت پتے کی نچلی سطح پر سفید روئی نما پھپھوند",
+      "دو سے تین دن میں پورا کھیت کالا ہو کر جل جانا اور بدبو آنا",
+      "آلو کے اندر کتھئی رنگ کا سوکھا سڑاؤ پیدا ہونا"
+    ],
+    "risk_factors": [
+      "Cold, overcast, foggy weather with temperatures between 10-20°C and relative humidity >85%",
+      "Frequent winter rains or heavy night dew in December and January across Punjab potato belt",
+      "Dense canopy with poor air movement and flood irrigation"
+    ],
+    "non_chemical_management": [
+      "Plant certified disease-free seed tubers from reputable sources",
+      "Ensure high earthing-up (مٹی چڑھانا) to cover tubers with at least 4-5 inches of soil, preventing spore wash down into tubers",
+      "Kill potato haulms (بیلیں کاٹنا / جلانا) 10-14 days prior to harvest to prevent tuber contamination",
+      "Avoid overhead sprinkler irrigation; irrigate only in furrows avoiding water logging"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Dimethomorph 50 WP + Mancozeb 75 WP or Cymoxanil + Mancozeb",
+      "trade_names": ["Acrobat MZ 90/600 WP", "Curzate M8", "Ridomil Gold MZ 68 WG", "Revus 250 SC"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "800 g/acre (Acrobat MZ) or 250 g/acre (Revus 250 SC)",
+      "dosage_numeric_ml_per_acre": 800.0,
+      "water_volume_liters_per_acre": 120,
+      "spray_timing": "Preventative spray before fog/rain, or immediate curative spray at first lesion sight",
+      "application_instructions": "High volume spray (120 liters water/acre) ensuring complete lower leaf coverage. Alternate systemic fungicides (Acrobat/Revus) with contact protectors (Mancozeb).",
+      "source": "Potato Research Institute Sahiwal & PARC Plant Pathology Division"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 14 days before digging tubers.",
+      "Do not consume or store blighted, rotten tubers.",
+      "Wear full protective rubber suit, gloves, and respiratory mask during spraying."
+    ],
+    "phi_days": 14
+  },
+  {
+    "id": "tomato_leaf_miner",
+    "crop": "Vegetables",
+    "target_crops": ["tomato", "potato", "eggplant", "vegetables"],
+    "pest_name": "Tomato Leaf Miner (ٹماٹر کی سرنگ بنانے والی سنڈی)",
+    "pest_name_ur": "ٹماٹر کی سنڈی / لیف مائنر",
+    "scientific_name": "Tuta absoluta",
+    "category": "Insect Pest (پتوں میں سرنگ بنانے والی سنڈی)",
+    "symptoms": [
+      "Irregular blotch-like mines or transparent blisters on tomato leaves (سرنگیں / چھالے)",
+      "Black frass (کیڑے کا فضلہ) clearly visible inside the transparent leaf mines",
+      "Bore holes near fruit calyx with rotting inside young green tomatoes",
+      "Desiccated leaves with severe defoliation and unmarketable fruit"
+    ],
+    "symptoms_ur": [
+      "پتوں کے اندر شفاف چھالے اور ٹیڑھی میڑھی سرنگیں",
+      "سرنگ کے اندر کالا فضلہ صاف دکھائی دینا",
+      "ٹماٹر کے پھل کے پاس باریک سوراخ اور اندر سے پھل کا سڑنا",
+      "پتوں کا سوکھ کر گرنا اور پیداوار کا ضائع ہونا"
+    ],
+    "risk_factors": [
+      "Warm greenhouse, tunnel, or open-field conditions (22-30°C)",
+      "Continuous solanaceous vegetable cropping without host-free periods",
+      "Transport of infested seedling trays across nurseries"
+    ],
+    "non_chemical_management": [
+      "Install Tuta-specific pheromone water-pan traps or Delta traps (10-15 traps/acre) for mass trapping",
+      "Cover nursery tunnels with 40-50 mesh insect-proof netting",
+      "Remove and incinerate mined leaves and infested tomato fruits daily",
+      "Conserve mirid bugs (Nesidiocoris tenuis) which feed voraciously on Tuta eggs and larvae"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Emamectin Benzoate 5 SG or Spinetoram 11.7 SC",
+      "trade_names": ["Proclaim 5 SG", "Radiant 11.7 SC", "Coragen 20 SC"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "75 g/acre (Proclaim 5 SG) or 100 ml/acre (Radiant 11.7 SC)",
+      "dosage_numeric_ml_per_acre": 75.0,
+      "water_volume_liters_per_acre": 100,
+      "spray_timing": "At first detection of leaf mines during morning or evening",
+      "application_instructions": "Thoroughly drench the entire plant canopy including lower older leaves. Avoid consecutive sprays of the same mode of action.",
+      "source": "Vegetable Research Institute Faisalabad & CABI Bio-protection Portal"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 7 days for fresh market tomatoes.",
+      "Never spray during tomato fruit picking days. Wait full 7 days after application.",
+      "Wear full protective gear (gloves, mask, protective glasses)."
+    ],
+    "phi_days": 7
+  },
+  {
+    "id": "chilli_anthracnose",
+    "crop": "Vegetables",
+    "target_crops": ["chilli", "pepper", "tomato", "vegetables"],
+    "pest_name": "Chilli Anthracnose / Fruit Rot (مرچ کا پھل گلنا / انتھراکنوز)",
+    "pest_name_ur": "مرچ کا پھل سڑاؤ",
+    "scientific_name": "Colletotrichum capsici / Colletotrichum acutatum",
+    "category": "Fungal Disease (پھپھوندی بیماری)",
+    "symptoms": [
+      "Sunken circular or oval dark lesions on ripening green and red chilli fruits",
+      "Concentric rings of tiny black fungal dots (acervuli) inside the fruit lesions",
+      "Premature drop and rotting of affected chillies",
+      "Dieback of branches: twigs drying from the top downwards with straw-colored appearance"
+    ],
+    "symptoms_ur": [
+      "لال اور ہری مرچوں پر اندر کو دھنسے ہوئے گول یا بیضوی کالے دھبے",
+      "دھبوں کے اندر دائروں کی شکل میں باریک کالے نقطے",
+      "مرچوں کا داغدار ہو کر قبل از وقت گرنا اور سڑنا",
+      "شاخوں کا اوپر سے نیچے کی طرف سوکھنا (ڈائی بیک)"
+    ],
+    "risk_factors": [
+      "High temperatures (28-32°C) combined with high rainfall or heavy sprinkler irrigation",
+      "Relative humidity exceeding 80% during fruit maturation",
+      "Infected seeds or crop debris from previous chilli crop"
+    ],
+    "non_chemical_management": [
+      "Use disease-free certified seeds; perform hot water seed treatment (52°C for 30 minutes)",
+      "Avoid overhead sprinkler irrigation; use ridge-and-furrow system with good drainage",
+      "Harvest ripe fruits promptly; do not allow over-ripe fruits to hang on bushes",
+      "Solarize soil and rotate with non-solanaceous crops like maize or pulses for 2 years"
+    ],
+    "verified_treatment": {
+      "active_ingredient": "Azoxystrobin 200 g/l + Difenoconazole 125 g/l or Mancozeb 75 WP",
+      "trade_names": ["Amistar Top 325 SC", "Score 250 EC", "Dithane M-45"],
+      "has_verified_dosage": true,
+      "safe_dosage_per_acre": "200 ml/acre (Amistar Top) or 800 g/acre (Mancozeb)",
+      "dosage_numeric_ml_per_acre": 200.0,
+      "water_volume_liters_per_acre": 100,
+      "spray_timing": "At flowering and fruit initiation stage before onset of monsoon rains",
+      "application_instructions": "Spray thoroughly to cover both leaves and fruit bunches. Repeat after 12-14 days if rainfall and humid weather continue.",
+      "source": "Vegetable Research Institute Faisalabad & Sindh Agriculture Research Institute Tandojam"
+    },
+    "safety_notes": [
+      "Pre-Harvest Interval (PHI): 10 days for green chillies; 14 days for dry red chillies.",
+      "Do not pick chillies within the PHI period.",
+      "Wash hands and face with soap after handling fungicide containers."
+    ],
+    "phi_days": 10
+  }
+]

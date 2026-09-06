@@ -465,7 +465,7 @@ export default function PestDoctorPage() {
                           Prioritize integrated pest management (IPM), cultural sanitation, and biological practices before applying toxic chemical sprays:
                         </p>
                         <div className="space-y-2">
-                          {diagnosis.non_chemical_management.map((step, idx) => (
+                          {(diagnosis.non_chemical_management || []).map((step, idx) => (
                             <div
                               key={idx}
                               className="bg-white rounded-xl p-3 border border-emerald-200/70 text-xs sm:text-sm text-slate-800 flex items-start space-x-2.5 shadow-2xs"
@@ -546,7 +546,7 @@ export default function PestDoctorPage() {
                             <span>Alternative Diagnostic Possibilities (دیگر ممکنہ امراض و مسائل)</span>
                           </h3>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {diagnosis.alternative_possibilities.map((alt, idx) => (
+                            {(diagnosis.alternative_possibilities || []).map((alt, idx) => (
                               <div
                                 key={idx}
                                 className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1 text-xs"

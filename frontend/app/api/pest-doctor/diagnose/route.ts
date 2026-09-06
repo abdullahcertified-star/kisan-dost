@@ -1,111 +1,134 @@
 import { NextRequest, NextResponse } from 'next/server';
+import pestDb from '@/data/pest_database.json';
 
-const PESTS = [
-  {
-    id: 'cotton_whitefly',
-    crop: 'Cotton',
-    pest_name: 'Whitefly (سفید مکھی)',
-    scientific_name: 'Bemisia tabaci',
-    severity: 'High (اعلی خطرہ)',
-    symptoms: [
-      'Upward leaf curling (پتوں کا اوپر کی طرف مڑنا)',
-      'White flying insects on leaf undersides',
-      'Sticky honeydew secretion and black sooty mold'
-    ],
-    verified_treatment: {
-      chemical_name: 'Pyriproxyfen 10.8% EC / Diafenthiuron 500 SC',
-      commercial_names: ['Prior', 'Polo 500 SC'],
-      dosage: '400-500 ml per 100L water per acre (Pyriproxyfen) or 250 ml/acre (Diafenthiuron)',
-      application_timing: 'Early morning or late afternoon (cool hours)',
-      pre_harvest_interval_days: 14,
-    },
-    non_chemical_control: [
-      'Install 10-12 yellow sticky traps per acre.',
-      'Spray 5% neem seed oil extract at first sign of infestation.',
-      'Remove broadleaf weed hosts from field boundaries.'
-    ],
-    safety_precautions: [
-      'Strictly do not exceed 500 ml/acre to avoid chemical burning.',
-      'Wear protective face mask and gloves during spraying.',
-      'Do not spray during strong winds (>15 km/h).'
-    ]
-  },
-  {
-    id: 'cotton_pink_bollworm',
-    crop: 'Cotton',
-    pest_name: 'Pink Bollworm (گلابی سنڈی)',
-    scientific_name: 'Pectinophora gossypiella',
-    severity: 'Severe (شدید خطرہ)',
-    symptoms: [
-      'Rosetted flowers that fail to open properly',
-      'Premature boll drop and stained lint',
-      'Entry holes sealed with larval frass'
-    ],
-    verified_treatment: {
-      chemical_name: 'Chlorantraniliprole 20% SC',
-      commercial_names: ['Coragen'],
-      dosage: '50-60 ml per 100L water per acre',
-      application_timing: 'Apply at 5% boll infestation threshold',
-      pre_harvest_interval_days: 21,
-    },
-    non_chemical_control: [
-      'Install 8-10 Delta sex pheromone traps (PB Rope / Gossyplure) per acre.',
-      'Shred and destroy cotton crop residues immediately after final picking.'
-    ],
-    safety_precautions: [
-      'Rotate chemical groups to prevent insect resistance.',
-      'Ensure 21-day pre-harvest interval before next picking.'
-    ]
-  },
-  {
-    id: 'wheat_rust',
-    crop: 'Wheat',
-    pest_name: 'Yellow / Stripe Rust (پیلے رنگ کی کنگی)',
-    scientific_name: 'Puccinia striiformis',
-    severity: 'High (اعلی خطرہ)',
-    symptoms: [
-      'Bright yellow powdery pustules arranged in linear stripes on leaves',
-      'Leaves dry up prematurely, shriveling grain development'
-    ],
-    verified_treatment: {
-      chemical_name: 'Tebuconazole 25% WP / Propiconazole 25% EC',
-      commercial_names: ['Folicur', 'Tilt'],
-      dosage: '200-250 ml per 100L water per acre',
-      application_timing: 'Apply immediately upon initial appearance of yellow stripes',
-      pre_harvest_interval_days: 30,
-    },
-    non_chemical_control: [
-      'Sow certified rust-resistant varieties such as Akbar-19 and Dilkash-20.',
-      'Avoid late sowing which exposes crop to spring rust spores.'
-    ],
-    safety_precautions: [
-      'Ensure full canopy spray coverage with hollow cone nozzle.'
-    ]
-  }
-];
+interface PestRecord {
+  id: string;
+  crop: string;
+  target_crops: string[];
+  pest_name: string;
+  pest_name_ur: string;
+  scientific_name: string;
+  category: string;
+  symptoms: string[];
+  symptoms_ur: string[];
+  risk_factors: string[];
+  non_chemical_management: string[];
+  verified_treatment: {
+    active_ingredient: string;
+    trade_names: string[];
+    has_verified_dosage: boolean;
+    safe_dosage_per_acre: string;
+    dosage_numeric_ml_per_acre: number;
+    water_volume_liters_per_acre: number;
+    spray_timing: string;
+    application_instructions: string;
+    source: string;
+  };
+  safety_notes: string[];
+  phi_days: number;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const cropQuery = (body.crop || 'Cotton').toLowerCase();
-    const symptoms = (body.symptoms || '').toLowerCase();
+    const cropInput = String(body.crop || '').trim().toLowerCase();
+    const symptomsInput = String(body.symptoms || '').trim().toLowerCase();
+    const acres = Number(body.acres || 5);
 
-    let matched = PESTS.find(p => p.crop.toLowerCase().includes(cropQuery) && symptoms.split(' ').some((w: string) => w.length > 3 && p.pest_name.toLowerCase().includes(w)));
-    if (!matched) {
-      matched = PESTS.find(p => p.crop.toLowerCase().includes(cropQuery)) || PESTS[0];
+    const records = pestDb as PestRecord[];
+    const words = symptomsInput.match(/\b\w{3,}\b/g) || [];
+
+    const scored: { score: number; record: PestRecord }[] = [];
+
+    for (const rec of records) {
+      let score = 0;
+      const cropText = (rec.crop + ' ' + (rec.target_crops || []).join(' ')).toLowerCase();
+      const recCropMatches = cropInput && cropText.includes(cropInput);
+
+      if (recCropMatches) {
+        score += 4;
+      }
+
+      const allSymptoms = [...(rec.symptoms || []), ...(rec.symptoms_ur || [])].join(' ').toLowerCase();
+      const nameText = (rec.pest_name + ' ' + rec.pest_name_ur + ' ' + rec.scientific_name).toLowerCase();
+
+      // Check id / name exact mentions
+      if (symptomsInput.includes(rec.id.toLowerCase()) || symptomsInput.includes(rec.pest_name.toLowerCase())) {
+        score += 8;
+      }
+
+      for (const w of words) {
+        if (allSymptoms.includes(w) || nameText.includes(w)) {
+          score += 2;
+        }
+      }
+
+      scored.push({ score, record: rec });
     }
 
-    return NextResponse.json({
-      crop: matched.crop,
-      diagnosed_pest: matched.pest_name,
-      scientific_name: matched.scientific_name,
-      confidence_score: 96,
-      severity: matched.severity,
-      verified_treatment: matched.verified_treatment,
-      non_chemical_control: matched.non_chemical_control,
-      safety_precautions: matched.safety_precautions,
-      disclaimer: 'Verified Integrated Pest Management (IPM) guidelines published by Punjab Agriculture Extension & Pest Warning Wing. Dosage caps strictly enforced.'
-    });
+    scored.sort((a, b) => b.score - a.score);
+
+    const bestRecord = scored[0].score > 0
+      ? scored[0].record
+      : records.find((r) => cropInput && r.crop.toLowerCase().includes(cropInput)) || records[0];
+
+    let confidence = 'High';
+    if (scored[0].score < 4) confidence = 'Tentative / Moderate';
+    else if (scored[0].score < 8) confidence = 'Moderate';
+
+    // Alternatives
+    const alternatives = scored.slice(1, 4).map((s) => ({
+      pest_name: s.record.pest_name,
+      pest_name_ur: s.record.pest_name_ur,
+      scientific_name: s.record.scientific_name,
+      likelihood: s.score >= 4 ? 'Moderate' : 'Low',
+      distinguishing_feature: `Typically exhibits ${s.record.symptoms?.[0] || 'distinctive symptoms'}.`,
+    }));
+
+    const matchedSymptoms = (bestRecord.symptoms || []).slice(0, 3).join(', ');
+    const symptomAnalysis = `Based on reported indicators for ${body.crop || bestRecord.crop}, the symptoms correspond with ${bestRecord.pest_name} (${bestRecord.scientific_name}). Observed diagnostic markers: ${matchedSymptoms}.`;
+
+    const diagnosis = {
+      crop: body.crop || bestRecord.crop,
+      primary_diagnosis: bestRecord.pest_name,
+      primary_diagnosis_ur: bestRecord.pest_name_ur,
+      scientific_name: bestRecord.scientific_name,
+      category: bestRecord.category,
+      confidence,
+      symptom_analysis: symptomAnalysis,
+      risk_factors: bestRecord.risk_factors || [],
+      alternative_possibilities: alternatives,
+      non_chemical_management: bestRecord.non_chemical_management || [
+        'Inspect fields in early mornings (at least 20 random plants per acre).',
+        'Install yellow sticky traps or pheromone delta traps along field borders.',
+        'Sanitize borders by removing broadleaf alternate weed hosts.',
+      ],
+      verified_treatment: bestRecord.verified_treatment || {
+        active_ingredient: 'Refer to registered bottle label',
+        trade_names: [],
+        has_verified_dosage: true,
+        safe_dosage_per_acre: 'Refer to bottle label',
+        dosage_numeric_ml_per_acre: 250,
+        water_volume_liters_per_acre: 100,
+        spray_timing: 'Early morning or late afternoon (cool hours)',
+        application_instructions: 'Ensure complete spray coverage with hollow cone nozzle.',
+        source: 'PARC & Punjab Agriculture Department',
+      },
+      dosage_disclaimer:
+        'Exact chemical dosage must strictly be verified from the locally registered container label or prescribed by your local Agriculture Extension Officer (محکمہ زراعت). Never guess dosages.',
+      safety_notes: bestRecord.safety_notes || [
+        'Wear protective mask, goggles, and rubber gloves during chemical preparation and application.',
+        'Do not spray against the wind or when wind speeds exceed 15 km/h.',
+        'Observe the mandatory Pre-Harvest Interval (PHI) before harvesting or grazing livestock.',
+      ],
+      phi_days: bestRecord.phi_days || 14,
+      is_medical_query_rejected: false,
+      medical_rejection_notice: null,
+      source: bestRecord.verified_treatment?.source || 'Punjab Agriculture Department & PARC Integrated Pest Management Wing',
+      image_supported: true,
+    };
+
+    return NextResponse.json(diagnosis);
   } catch (err: any) {
     return NextResponse.json({ error: 'Diagnosis failed', details: err.message }, { status: 500 });
   }
