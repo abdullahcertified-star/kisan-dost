@@ -125,6 +125,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authStep, setAuthStep] = useState(0);
   const [authProgress, setAuthProgress] = useState(0);
+  const [isLoggedOut, setIsLoggedOut] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -135,18 +136,16 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     const lowers = 'abcdefghijkmnopqrstuvwxyz';
     const numbers = '23456789';
     const specials = '!@#$%^&*';
-
-    let gen = '';
-    gen += uppers[Math.floor(Math.random() * uppers.length)];
-    gen += lowers[Math.floor(Math.random() * lowers.length)];
-    gen += numbers[Math.floor(Math.random() * numbers.length)];
-    gen += specials[Math.floor(Math.random() * specials.length)];
-
-    const all = uppers + lowers + numbers + specials;
-    for (let i = 0; i < 6; i++) {
-      gen += all[Math.floor(Math.random() * all.length)];
+    let pwd = '';
+    pwd += uppers[Math.floor(Math.random() * uppers.length)];
+    pwd += lowers[Math.floor(Math.random() * lowers.length)];
+    pwd += numbers[Math.floor(Math.random() * numbers.length)];
+    pwd += specials[Math.floor(Math.random() * specials.length)];
+    const allChars = uppers + lowers + numbers + specials;
+    for (let i = 4; i < 12; i++) {
+      pwd += allChars[Math.floor(Math.random() * allChars.length)];
     }
-    setPassword(gen);
+    setPassword(pwd);
     setShowPassword(true);
   };
 
@@ -154,12 +153,22 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     const savedLang = localStorage.getItem('kd_lang') as 'en' | 'ur' | null;
     if (savedLang) setLang(savedLang);
 
-    // Farmer auth completely removed from project — automatically redirect to dashboard
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const from = urlParams.get('from');
-      const target = from && from.startsWith('/') && !from.startsWith('/login') && !from.startsWith('/register') ? from : '/';
-      window.location.replace(target);
+    if (typeof window !== 'undefined' && window.location.search.includes('logged_out')) {
+      setIsLoggedOut(true);
+    }
+
+    // Only redirect if user is already authenticated AND not arriving via explicit logout
+    const isExplicitLogout = typeof window !== 'undefined' && window.location.search.includes('logged_out');
+    if (!isExplicitLogout && isAuthenticated()) {
+      let targetRedirect = '/';
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const from = urlParams.get('from');
+        if (from && from.startsWith('/') && !from.startsWith('/login') && !from.startsWith('/register')) {
+          targetRedirect = from;
+        }
+        window.location.replace(targetRedirect);
+      }
       return;
     }
 
@@ -601,6 +610,26 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                   </button>
                 </div>
               </div>
+
+              {/* Direct Access Launch Button */}
+              <Link
+                href="/"
+                className="w-full flex items-center justify-between py-2.5 px-3.5 rounded-2xl bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 font-semibold text-xs transition group shadow-xs"
+              >
+                <span className="flex items-center space-x-2">
+                  <span>🌾</span>
+                  <span>Enter Farm OS Dashboard Directly (ڈیش بورڈ)</span>
+                </span>
+                <span className="text-[11px] text-emerald-400 group-hover:translate-x-1 transition-transform">Launch →</span>
+              </Link>
+
+              {/* Logged Out Notice */}
+              {isLoggedOut && (
+                <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center space-x-2 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <span>You have been safely signed out. (آپ لاگ آؤٹ ہو چکے ہیں)</span>
+                </div>
+              )}
 
               {/* Mode Tabs */}
               <div className="grid grid-cols-2 p-1 bg-slate-900/90 rounded-2xl border border-slate-800">

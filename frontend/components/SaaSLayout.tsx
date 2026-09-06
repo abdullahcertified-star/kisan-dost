@@ -28,6 +28,7 @@ import {
   ArrowRight,
   Globe,
   User,
+  LogOut,
 } from 'lucide-react';
 
 interface SaaSLayoutProps {
@@ -53,6 +54,17 @@ export default function SaaSLayout({
   const [farmZone, setFarmZone] = useState('Faisalabad Agro Zone (5 Acres)');
   const [searchQuery, setSearchQuery] = useState('');
   const [lang, setLang] = useState<'en' | 'ur'>('en');
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('kisan_auth_token');
+      localStorage.removeItem('kisan_farmer_profile');
+      localStorage.removeItem('kd_dashboard_profile');
+      localStorage.removeItem('kd_custom_gemini_key');
+      document.cookie = 'kisan_auth_token=; path=/; max-age=0; SameSite=Lax';
+      window.location.replace('/login?logged_out=1');
+    }
+  };
 
   useEffect(() => {
     const profile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
@@ -173,13 +185,28 @@ export default function SaaSLayout({
             })}
           </nav>
 
-          {/* Sidebar Footer System Status */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 px-1">
-            <div className="flex items-center space-x-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-medium text-slate-600">Farm OS Online</span>
+          {/* Sidebar Footer Logout Button */}
+          <div className="pt-3 border-t border-slate-100 space-y-2">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200/80 hover:border-rose-200 transition-all font-semibold text-xs group"
+            >
+              <div className="flex items-center space-x-2">
+                <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center group-hover:bg-rose-200 transition">
+                  <LogOut className="w-3.5 h-3.5" />
+                </div>
+                <span>Logout (لاگ آؤٹ)</span>
+              </div>
+              <span className="text-[10px] text-slate-400 group-hover:text-rose-500 font-normal">Sign Out</span>
+            </button>
+            <div className="flex items-center justify-between text-[10px] text-slate-400 px-1">
+              <div className="flex items-center space-x-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Farm OS Online</span>
+              </div>
+              <span className="font-mono">v2.5</span>
             </div>
-            <span className="font-mono text-[10px]">v2.5</span>
           </div>
         </div>
       </aside>
@@ -262,6 +289,16 @@ export default function SaaSLayout({
               </div>
               <span className="hidden md:inline">{farmerName.split(' ')[0]}</span>
             </Link>
+
+            {/* Header Logout Button */}
+            <button
+              onClick={handleLogout}
+              title="Logout / Sign Out"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200/80 hover:border-rose-200 transition-all text-xs font-semibold"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
 
             {/* Extra Action Buttons if passed */}
             {actions && <div className="hidden sm:block">{actions}</div>}

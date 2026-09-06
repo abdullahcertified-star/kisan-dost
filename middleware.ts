@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Non-blocking middleware — all routes public with zero mandatory farmer auth
-  return NextResponse.next();
+  const res = NextResponse.next();
+  // Prevent any browser or CDN from serving stale old UI or cached sessions
+  res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.headers.set('Pragma', 'no-cache');
+  res.headers.set('Expires', '0');
+  return res;
 }
 
 export const config = {
