@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
+import SaaSLayout from '@/components/SaaSLayout';
 import { API_BASE_URL } from '@/lib/api';
 import {
   Sparkles,
@@ -330,10 +330,11 @@ export default function DemoModePage() {
   const activeData = stepData[currentStep];
 
   return (
-    <div className="min-h-screen bg-[#f8faf9] text-slate-900 flex flex-col font-sans">
-      <Navbar />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <SaaSLayout
+      title="Interactive Demo Mode"
+      subtitle="Complete step-by-step walkthrough of Kisan Dost multi-agent agronomy platform"
+      badge="Hackathon Demo"
+    >
         {/* Top Hero Banner */}
         <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-emerald-800/40 relative overflow-hidden">
           <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -851,7 +852,6 @@ export default function DemoModePage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </SaaSLayout>
   );
 }

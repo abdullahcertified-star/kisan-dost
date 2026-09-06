@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Navbar from '@/components/Navbar';
+import SaaSLayout from '@/components/SaaSLayout';
 import { API_BASE_URL } from '@/lib/api';
 import {
   Landmark,
@@ -83,10 +83,11 @@ export default function GovtSchemesPage() {
   }, [province, district, crop]);
 
   return (
-    <div className="min-h-screen bg-[#f8faf9] text-slate-900 flex flex-col font-sans">
-      <Navbar />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6">
+    <SaaSLayout
+      title="Government Support Schemes"
+      subtitle="Grounded eligibility criteria for Kisan Card, Solar Tubewell, and Agricultural Subsidies"
+      badge="Govt Portals Verified"
+    >
         {/* Header Ribbon */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
           <div className="flex items-start sm:items-center gap-4.5">
@@ -334,7 +335,6 @@ export default function GovtSchemesPage() {
             ))}
           </div>
         )}
-      </main>
-    </div>
+      </SaaSLayout>
   );
 }

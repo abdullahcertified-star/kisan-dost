@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Navbar from '@/components/Navbar';
+import SaaSLayout from '@/components/SaaSLayout';
 import Link from 'next/link';
 import {
   createFarmerProfile,
@@ -164,10 +164,11 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f7f5] text-slate-900 flex flex-col font-sans">
-      <Navbar />
-
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <SaaSLayout
+      title="Farmer Profile & Settings"
+      subtitle="Manage your agricultural identity, land acreage, soil characteristics, and irrigation sources"
+      badge="Farm Profile"
+    >
         {/* Breadcrumb / Top Bar */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -514,7 +515,6 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </SaaSLayout>
   );
 }

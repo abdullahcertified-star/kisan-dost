@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Navbar from '@/components/Navbar';
+import SaaSLayout from '@/components/SaaSLayout';
 import { API_BASE_URL } from '@/lib/api';
 import {
   Activity,
@@ -133,10 +133,11 @@ export default function ObservabilityPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
-      <Navbar />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <SaaSLayout
+      title="Agent Observability & Tracing Hub"
+      subtitle="Inspect complete multi-agent handoffs, specialized tool inputs/results, and latency profiling"
+      badge="ADK Tracing"
+    >
         {/* Page Title & Hero Card */}
         <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-emerald-50 rounded-full blur-3xl pointer-events-none"></div>
@@ -554,7 +555,6 @@ export default function ObservabilityPage() {
             )}
           </div>
         </div>
-      </main>
-    </div>
+      </SaaSLayout>
   );
 }

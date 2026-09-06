@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
+import SaaSLayout from '@/components/SaaSLayout';
 import { loadSavedItem, saveItem } from '@/lib/storage';
 import { API_BASE_URL } from '@/lib/api';
 
@@ -192,10 +192,11 @@ export default function AssistantPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-emerald-50/30 text-slate-900 flex flex-col font-sans">
-      <Navbar />
-
-      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-5 flex flex-col">
+    <SaaSLayout
+      title="AI Farmer Assistant"
+      subtitle="Intelligent multi-agent consultation: Agronomy, Pest Clinic, Mandi Rates, and Farm Profit"
+      badge="Google ADK Multi-Agent"
+    >
         {/* Header Ribbon with Language Toggle and Specialists Directory */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -549,7 +550,6 @@ export default function AssistantPage() {
         <div className="mt-3 text-center text-[11px] text-slate-500">
           ⚠️ Kisan Dost adheres strictly to verified Pakistani Agricultural Research Council (PARC) and provincial agronomy datasets. Dosages must be verified on registered product labels.
         </div>
-      </main>
-    </div>
+      </SaaSLayout>
   );
 }

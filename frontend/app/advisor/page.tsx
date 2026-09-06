@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Navbar from '@/components/Navbar';
+import SaaSLayout from '@/components/SaaSLayout';
 import { fetchCropRecommendations } from '@/lib/api';
 import { CropPlan, CropRecommendation } from '@/types';
 import { loadSavedItem, saveItem } from '@/lib/storage';
@@ -164,10 +164,11 @@ export default function CropAdvisorPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f8faf9] text-slate-900 flex flex-col font-sans">
-      <Navbar />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <SaaSLayout
+      title="Crop Suitability Advisor"
+      subtitle="Deterministic agro-ecological scoring engine grounded in Pakistani agricultural research"
+      badge="Agro-Ecological"
+    >
         {/* Header Title Banner */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5 mb-8">
           <div>
@@ -582,7 +583,6 @@ export default function CropAdvisorPage() {
             )}
           </div>
         </div>
-      </main>
-    </div>
+      </SaaSLayout>
   );
 }

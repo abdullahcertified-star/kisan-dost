@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
+import SaaSLayout from '@/components/SaaSLayout';
 import { fetchMarketPrices } from '@/lib/api';
 import { MandiPrice, MandiPricesResponse } from '@/types';
 import {
@@ -263,10 +263,11 @@ export default function MarketPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f7f5] flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <SaaSLayout
+      title="Mandi Wholesale Rates"
+      subtitle="AMIS Pakistan daily wholesale benchmarks across 48+ mandis"
+      badge="336 Live Records"
+    >
         {/* Floating Toast Notification */}
         {copiedNotification && (
           <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold flex items-center space-x-2 border border-slate-700 animate-bounce">
@@ -844,7 +845,6 @@ export default function MarketPage() {
             )}
           </>
         )}
-      </main>
-    </div>
+      </SaaSLayout>
   );
 }

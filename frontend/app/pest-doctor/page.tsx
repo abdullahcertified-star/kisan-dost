@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Navbar from '@/components/Navbar';
+import SaaSLayout from '@/components/SaaSLayout';
 import { diagnosePestProblem, fetchPestDatabase } from '@/lib/api';
 import { PestDiagnosis, PestDiagnosisRequest } from '@/types';
 import { loadSavedItem, saveItem } from '@/lib/storage';
@@ -145,10 +145,11 @@ export default function PestDoctorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f7f5] text-slate-900 flex flex-col font-sans">
-      <Navbar />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <SaaSLayout
+      title="Pest & Disease Doctor"
+      subtitle="PARC & Punjab Extension verified IPM diagnostics and treatments"
+      badge="Verified IPM"
+    >
         {/* Page Header */}
         <div className="mb-6 bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -705,7 +706,6 @@ export default function PestDoctorPage() {
             )}
           </div>
         )}
-      </main>
-    </div>
+      </SaaSLayout>
   );
 }

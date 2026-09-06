@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
+import SaaSLayout from '@/components/SaaSLayout';
 import { calculateProfit } from '@/lib/api';
 import { ProfitInput, ProfitEstimate } from '@/types';
 import {
@@ -423,10 +423,11 @@ function ProfitCalculatorContent() {
   }, [result]);
 
   return (
-    <div className="min-h-screen bg-[#f4f7f5] flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <SaaSLayout
+      title="Crop Profit & Budget Engine"
+      subtitle="Deterministic financial revenues, itemized costs, net returns, and break-even yields"
+      badge="Financial Engine"
+    >
         {/* Hero Header */}
         <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-sky-950 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -938,8 +939,7 @@ function ProfitCalculatorContent() {
             )}
           </div>
         </div>
-      </main>
-    </div>
+      </SaaSLayout>
   );
 }
 
