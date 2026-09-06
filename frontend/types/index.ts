@@ -100,6 +100,7 @@ export interface WeatherReport {
   heatwave_risk: boolean;
   frost_risk: boolean;
   forecast_source: string;
+  source?: string;
   recorded_at?: string;
 }
 

@@ -178,7 +178,7 @@ export default function WeatherPage() {
                     <span className="text-xs bg-emerald-800/80 border border-emerald-500/40 text-emerald-200 px-2.5 py-0.5 rounded-full">
                       Lat: {weather.latitude}° | Lon: {weather.longitude}°
                     </span>
-                    {(weather.forecast_source || weather.source || '').includes('Live') ? (
+                    {((weather.forecast_source || weather.source || '') as string).includes('Live') ? (
                       <span className="inline-flex items-center space-x-1.5 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-2.5 py-0.5 rounded-full font-medium">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>Live Radar Telemetry</span>
