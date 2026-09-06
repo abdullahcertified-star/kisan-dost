@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { loadSavedItem, clearAuthSession, isAuthenticated } from '@/lib/storage';
+import { loadSavedItem } from '@/lib/storage';
 import FloatingBot from '@/components/FloatingBot';
 import {
   LayoutDashboard,
@@ -28,7 +28,6 @@ import {
   ArrowRight,
   Globe,
   User,
-  LogOut
 } from 'lucide-react';
 
 interface SaaSLayoutProps {
@@ -49,39 +48,14 @@ export default function SaaSLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [farmerName, setFarmerName] = useState('Sarah Chen');
-  const [farmerRole, setFarmerRole] = useState('Farm Manager');
-  const [farmZone, setFarmZone] = useState('Punjab Agro Zone');
+  const [farmerName, setFarmerName] = useState('Abdullah');
+  const [farmerRole, setFarmerRole] = useState('Farm Manager & Owner');
+  const [farmZone, setFarmZone] = useState('Faisalabad Agro Zone (5 Acres)');
   const [searchQuery, setSearchQuery] = useState('');
   const [lang, setLang] = useState<'en' | 'ur'>('en');
-  const [authChecked, setAuthChecked] = useState(false);
-
-  const handleLogout = () => {
-    clearAuthSession();
-    window.location.replace('/login');
-  };
 
   useEffect(() => {
-    // BFCache / Back Button Protection: redirect to /login if user logged out and presses Back
-    const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted || !isAuthenticated()) {
-        if (!isAuthenticated()) {
-          window.location.replace('/login');
-        }
-      }
-    };
-    window.addEventListener('pageshow', handlePageShow);
-
-    const token = typeof window !== 'undefined' ? localStorage.getItem('kisan_auth_token') : null;
     const profile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
-
-    // Route Authorization Guard
-    if (!token && !profile) {
-      window.location.replace('/login?from=' + encodeURIComponent(pathname || '/'));
-      return;
-    }
-    setAuthChecked(true);
-
     if (profile) {
       if (profile.name) setFarmerName(profile.name);
       if (profile.role) setFarmerRole(profile.role);
@@ -92,9 +66,7 @@ export default function SaaSLayout({
     if (savedLang) {
       setLang(savedLang);
     }
-
-    return () => window.removeEventListener('pageshow', handlePageShow);
-  }, [pathname, router]);
+  }, []);
 
   const toggleLanguage = (newLang: 'en' | 'ur') => {
     setLang(newLang);
@@ -115,7 +87,6 @@ export default function SaaSLayout({
     { name: 'Govt Schemes', icon: Landmark, href: '/schemes' },
     { name: 'Observability', icon: Sliders, href: '/observability' },
     { name: 'Demo Mode', icon: Sparkles, href: '/demo' },
-    { name: 'Farmer Auth', icon: User, href: '/login' },
     { name: 'Settings', icon: Settings, href: '/profile' },
   ];
 
@@ -202,21 +173,13 @@ export default function SaaSLayout({
             })}
           </nav>
 
-          {/* Sidebar Footer Logout Button (Bottom Left) */}
-          <div className="pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200/80 hover:border-rose-200 transition-all font-semibold text-xs group"
-            >
-              <div className="flex items-center space-x-2">
-                <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center group-hover:bg-rose-200 transition">
-                  <LogOut className="w-3.5 h-3.5" />
-                </div>
-                <span>Logout (لاگ آؤٹ)</span>
-              </div>
-              <span className="text-[10px] text-slate-400 group-hover:text-rose-500 font-normal">Sign Out</span>
-            </button>
+          {/* Sidebar Footer System Status */}
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 px-1">
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-medium text-slate-600">Farm OS Online</span>
+            </div>
+            <span className="font-mono text-[10px]">v2.5</span>
           </div>
         </div>
       </aside>
@@ -288,28 +251,17 @@ export default function SaaSLayout({
               <span className="w-2 h-2 rounded-full bg-emerald-500 absolute top-2 right-2 border-2 border-white" />
             </button>
 
-            {/* User Avatar & Login Link */}
+            {/* User Avatar & Profile Link */}
             <Link
-              href="/login"
-              title="Sign In / Register Farmer Account"
+              href="/profile"
+              title="Farmer Profile & Settings"
               className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 transition-all text-xs font-semibold"
             >
               <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
                 {farmerName.charAt(0)}
               </div>
               <span className="hidden md:inline">{farmerName.split(' ')[0]}</span>
-              <span className="text-[10px] text-emerald-600 bg-emerald-100/60 px-1.5 py-0.5 rounded-sm font-bold">Auth</span>
             </Link>
-
-            {/* Header Logout Button */}
-            <button
-              onClick={handleLogout}
-              title="Logout / Sign Out"
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200/80 hover:border-rose-200 transition-all text-xs font-semibold"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
 
             {/* Extra Action Buttons if passed */}
             {actions && <div className="hidden sm:block">{actions}</div>}

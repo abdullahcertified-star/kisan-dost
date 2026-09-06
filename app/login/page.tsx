@@ -154,17 +154,12 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     const savedLang = localStorage.getItem('kd_lang') as 'en' | 'ur' | null;
     if (savedLang) setLang(savedLang);
 
-    // If already authenticated, redirect to destination or home immediately
-    if (isAuthenticated()) {
-      let targetRedirect = '/';
-      if (typeof window !== 'undefined') {
-        const urlParams = new URLSearchParams(window.location.search);
-        const from = urlParams.get('from');
-        if (from && from.startsWith('/') && !from.startsWith('/login') && !from.startsWith('/register')) {
-          targetRedirect = from;
-        }
-        window.location.replace(targetRedirect);
-      }
+    // Farmer auth completely removed from project — automatically redirect to dashboard
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const from = urlParams.get('from');
+      const target = from && from.startsWith('/') && !from.startsWith('/login') && !from.startsWith('/register') ? from : '/';
+      window.location.replace(target);
       return;
     }
 

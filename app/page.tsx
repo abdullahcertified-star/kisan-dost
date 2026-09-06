@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { loadSavedItem, clearAuthSession, isAuthenticated } from '@/lib/storage';
+import { loadSavedItem } from '@/lib/storage';
 import { API_BASE_URL } from '@/lib/api';
 import FloatingBot from '@/components/FloatingBot';
 import {
@@ -37,7 +37,6 @@ import {
   ShieldCheck,
   Thermometer,
   Wind,
-  LogOut
 } from 'lucide-react';
 
 interface WeatherData {
@@ -46,7 +45,10 @@ interface WeatherData {
   apparent_temperature?: number;
   humidity?: number;
   wind_speed?: number;
+  condition_text?: string;
   weather_condition?: string;
+  is_day?: number;
+  precipitation_sum?: number;
   forecast_source?: string;
   temp_max?: number;
   temp_min?: number;
@@ -55,15 +57,11 @@ interface WeatherData {
 export default function AgriculturalSaaSDashboard() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [district, setDistrict] = useState('Multan');
-  const [farmerName, setFarmerName] = useState('Sarah Chen');
-  const [farmerRole, setFarmerRole] = useState('Farm Manager');
-  const [farmZone, setFarmZone] = useState('Punjab Agro Zone');
+  const [district, setDistrict] = useState('Faisalabad');
+  const [farmerName, setFarmerName] = useState('Abdullah');
+  const [farmerRole, setFarmerRole] = useState('Farm Manager & Owner');
+  const [farmZone, setFarmZone] = useState('Faisalabad Agro Zone (5 Acres)');
 
-  const handleLogout = () => {
-    clearAuthSession();
-    window.location.replace('/login');
-  };
   const [acres, setAcres] = useState(15);
   const [activeFields, setActiveFields] = useState(12);
   const [selectedYear, setSelectedYear] = useState('2026');
@@ -76,32 +74,16 @@ export default function AgriculturalSaaSDashboard() {
     percentage: 78,
   });
 
-  // Load saved profile if available, verify route auth, and prevent bfcache back button return
+  // Load saved profile if available
   useEffect(() => {
-    const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted || !isAuthenticated()) {
-        if (!isAuthenticated()) {
-          window.location.replace('/login');
-        }
-      }
-    };
-    window.addEventListener('pageshow', handlePageShow);
-
-    const token = typeof window !== 'undefined' ? localStorage.getItem('kisan_auth_token') : null;
     const profile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
-
-    if (!token && !profile) {
-      window.location.replace('/login');
-      return;
-    }
     if (profile) {
       if (profile.name) setFarmerName(profile.name);
       if (profile.district) setDistrict(profile.district);
       if (profile.land_acres) setAcres(Number(profile.land_acres));
       if (profile.role) setFarmerRole(profile.role);
+      if (profile.district) setFarmZone(`${profile.district} Agro Zone`);
     }
-
-    return () => window.removeEventListener('pageshow', handlePageShow);
   }, []);
 
   // Fetch live weather data
@@ -274,21 +256,13 @@ export default function AgriculturalSaaSDashboard() {
             })}
           </nav>
 
-          {/* Sidebar Footer Logout Button (Bottom Left) */}
-          <div className="pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200/80 hover:border-rose-200 transition-all font-semibold text-xs group"
-            >
-              <div className="flex items-center space-x-2.5">
-                <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center group-hover:bg-rose-200 transition">
-                  <LogOut className="w-4 h-4" />
-                </div>
-                <span>Logout (لاگ آؤٹ)</span>
-              </div>
-              <span className="text-[10px] text-slate-400 group-hover:text-rose-500 font-normal">Sign Out</span>
-            </button>
+          {/* Sidebar Footer System Status */}
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 px-1">
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-medium text-slate-600">Farm OS Online</span>
+            </div>
+            <span className="font-mono text-[10px]">v2.5</span>
           </div>
         </div>
       </aside>
@@ -333,7 +307,7 @@ export default function AgriculturalSaaSDashboard() {
               <span className="w-2 h-2 rounded-full bg-emerald-500 absolute top-2 right-2 border-2 border-white" />
             </button>
 
-            {/* User Avatar Mini & Login Link */}
+            {/* User Avatar Mini & Profile Link */}
             <Link
               href="/profile"
               title="Farmer Profile & Settings"
@@ -344,16 +318,6 @@ export default function AgriculturalSaaSDashboard() {
               </div>
               <span className="hidden md:inline">{farmerName.split(' ')[0]}</span>
             </Link>
-
-            {/* Header Logout Button */}
-            <button
-              onClick={handleLogout}
-              title="Logout / Sign Out"
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200/80 hover:border-rose-200 transition-all text-xs font-semibold"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
           </div>
         </header>
 

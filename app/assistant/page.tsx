@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import SaaSLayout from '@/components/SaaSLayout';
-import { loadSavedItem, saveItem, isAuthenticated } from '@/lib/storage';
+import { loadSavedItem, saveItem } from '@/lib/storage';
 import { API_BASE_URL } from '@/lib/api';
 import {
   Bot,
@@ -141,26 +141,14 @@ export default function AssistantPage() {
       setMessages(savedHistory);
     }
 
-    const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted || !isAuthenticated()) {
-        if (!isAuthenticated()) {
-          window.location.replace('/login');
-        }
-      }
-    };
-    window.addEventListener('pageshow', handlePageShow);
-
     return () => {
       window.removeEventListener('kd_language_change', onLangChange);
-      window.removeEventListener('pageshow', handlePageShow);
     };
   }, []);
 
   const toggleAssistantLanguage = (newLang: 'en' | 'ur') => {
     setLang(newLang);
     localStorage.setItem('kd_lang', newLang);
-    document.documentElement.setAttribute('dir', newLang === 'ur' ? 'rtl' : 'ltr');
-    document.documentElement.setAttribute('lang', newLang);
     window.dispatchEvent(new CustomEvent('kd_language_change', { detail: newLang }));
   };
 
