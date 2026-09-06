@@ -87,6 +87,7 @@ export default function SaaSLayout({
     { name: 'Govt Schemes', icon: Landmark, href: '/schemes' },
     { name: 'Observability', icon: Sliders, href: '/observability' },
     { name: 'Demo Mode', icon: Sparkles, href: '/demo' },
+    { name: 'Farmer Auth', icon: User, href: '/login' },
     { name: 'Settings', icon: Settings, href: '/profile' },
   ];
 
@@ -256,11 +257,17 @@ export default function SaaSLayout({
               <span className="w-2 h-2 rounded-full bg-emerald-500 absolute top-2 right-2 border-2 border-white" />
             </button>
 
-            {/* User Avatar */}
-            <Link href="/profile" className="flex items-center space-x-2 p-0.5 rounded-full hover:ring-2 hover:ring-emerald-500/30 transition-all">
-              <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+            {/* User Avatar & Login Link */}
+            <Link
+              href="/login"
+              title="Sign In / Register Farmer Account"
+              className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 transition-all text-xs font-semibold"
+            >
+              <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
                 {farmerName.charAt(0)}
               </div>
+              <span className="hidden md:inline">{farmerName.split(' ')[0]}</span>
+              <span className="text-[10px] text-emerald-600 bg-emerald-100/60 px-1.5 py-0.5 rounded-sm font-bold">Auth</span>
             </Link>
 
             {/* Extra Action Buttons if passed */}
