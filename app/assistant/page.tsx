@@ -5,41 +5,105 @@ import Link from 'next/link';
 import SaaSLayout from '@/components/SaaSLayout';
 import { loadSavedItem, saveItem } from '@/lib/storage';
 import { API_BASE_URL } from '@/lib/api';
+import {
+  Bot,
+  User,
+  Send,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Copy,
+  Check,
+  RotateCcw,
+  ThumbsUp,
+  ThumbsDown,
+  Sparkles,
+  Sprout,
+  Scale,
+  Bug,
+  TrendingUp,
+  Landmark,
+  Plus,
+  Trash2,
+  ShieldCheck,
+  ChevronRight,
+  HelpCircle,
+  ExternalLink,
+  Info
+} from 'lucide-react';
 
 interface Message {
   id: string;
   sender: 'user' | 'agent';
   text: string;
   agentName?: string;
-  toolUsed?: string;
-  toolData?: any;
-  disclaimer?: string;
+  specialistTitle?: string;
+  specialistIcon?: string;
+  modelUsed?: string;
+  suggestedFollowups?: string[];
+  feedback?: 'up' | 'down' | null;
   timestamp: string;
   isError?: boolean;
-  debugTrace?: any;
 }
 
-const AGENT_META: Record<string, { name: string; urdu: string; icon: string; color: string; badgeBg: string }> = {
-  triage: { name: 'Triage Coordinator', urdu: 'مرکزی رابطہ کار', icon: '🛡️', color: 'text-sky-700', badgeBg: 'bg-sky-50 border-sky-200' },
-  agronomy: { name: 'Agronomy Specialist', urdu: 'ماہر زراعت', icon: '🌾', color: 'text-emerald-800', badgeBg: 'bg-emerald-50 border-emerald-200' },
-  pest_doctor: { name: 'Pest Doctor', urdu: 'ماہر امراض و کیڑے', icon: '🔬', color: 'text-amber-800', badgeBg: 'bg-amber-50 border-amber-200' },
-  market: { name: 'Mandi Market Specialist', urdu: 'ماہر منڈی ریٹس', icon: '📈', color: 'text-blue-800', badgeBg: 'bg-blue-50 border-blue-200' },
-  finance: { name: 'Finance & Profit Specialist', urdu: 'ماہر مالیات و منافع', icon: '💰', color: 'text-teal-800', badgeBg: 'bg-teal-50 border-teal-200' },
-};
+const STARTER_PROMPTS = [
+  {
+    icon: '🌾',
+    title: 'Crop Planning (فصل کا انتخاب)',
+    desc: '5 acres in Multan with limited water: what crop yields maximum profit?',
+    urdu: 'ملتان میں 5 ایکڑ محدود پانی کے لیے منافع بخش فصل کونسی ہے؟',
+    prompt: 'I have 5 acres in Multan with limited water access. What crop gives the highest net profit in Kharif/Rabi?',
+  },
+  {
+    icon: '⚖️',
+    title: 'Fertilizer Dosage (کھاد کا حساب)',
+    desc: 'Exact DAP & Urea bag requirements for 5 acres of wheat',
+    urdu: '5 ایکڑ گندم کے لیے ڈی اے پی اور یوریا کی کتنی بوریاں درکار ہیں؟',
+    prompt: 'How many bags of DAP and Urea should I apply for 5 acres of wheat, and when is the best application time?',
+  },
+  {
+    icon: '🐛',
+    title: 'Pest Doctor (کیڑوں کا علاج)',
+    desc: 'Cotton leaf curl virus & whitefly safe chemical treatment',
+    urdu: 'کپاس میں سفید مکھی اور مروڑیا روگ کا تصدیق شدہ اسپرے',
+    prompt: 'My cotton leaves are turning yellow and curling from whitefly. What verified pesticide and dosage should I use?',
+  },
+  {
+    icon: '📈',
+    title: 'Mandi Rates (منڈی کے ریٹس)',
+    desc: 'Today\'s wholesale prices for Wheat & Cotton in Punjab mandis',
+    urdu: 'ملتان اور فیصل آباد غلہ منڈی کے آج کے تازہ ترین ریٹس',
+    prompt: 'What are today\'s wholesale market rates for wheat and cotton in Multan and Faisalabad mandis?',
+  },
+  {
+    icon: '🚜',
+    title: 'Govt Subsidies (سرکاری اسکیمیں)',
+    desc: 'How to register for CM Punjab Kisan Card & Green Tractor subsidy',
+    urdu: 'وزیر اعلیٰ کسان کارڈ اور گرین ٹریکٹر سبسڈی کے لیے کیسے اپلائی کریں؟',
+    prompt: 'How can I apply for the CM Punjab Kisan Card and the Green Tractor subsidy scheme?',
+  },
+  {
+    icon: '🌦️',
+    title: 'Weather & Irrigation (موسم و پانی)',
+    desc: 'Rain radar forecast and tubewell irrigation scheduling advice',
+    urdu: 'اگلے 7 دن میں بارش کی کیا پیشگوئی ہے اور آبپاشی کب کروں؟',
+    prompt: 'What is the rainfall forecast for Multan this week and when is it safe to irrigate my fields?',
+  },
+];
 
 export default function AssistantPage() {
-  const [lang, setLang] = useState<'ur' | 'en'>('ur');
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [activeSpecialist, setActiveSpecialist] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string>('kisan_session_' + Date.now());
-  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
-  const [devMode, setDevMode] = useState<boolean>(false);
-  const [expandedTraces, setExpandedTraces] = useState<Record<string, boolean>>({});
+  const [sessionId, setSessionId] = useState<string>('session_' + Date.now());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load saved session or initialize
+  // Initialize session & load chat history
   useEffect(() => {
     const savedSession = loadSavedItem<string>('kd_chat_session_id', '');
     if (savedSession) {
@@ -50,123 +114,112 @@ export default function AssistantPage() {
       saveItem('kd_chat_session_id', newId);
     }
 
-    const savedMessages = loadSavedItem<Message[]>('kd_assistant_history', []);
-    if (savedMessages && savedMessages.length > 0) {
-      setMessages(savedMessages);
-    } else {
-      // Initial Welcome Message
-      const welcomeMsg: Message = {
-        id: 'msg_welcome',
-        sender: 'agent',
-        text: 'السلام علیکم! میں کسان دوست اے آئی معاون ہوں۔ آپ اپنی فصل، زمین، کھاد کے حساب، کپاس اور گندم کے امراض، منڈی ریٹس یا منافع کے بارے میں سوال پوچھ سکتے ہیں۔\n\nWelcome to Kisan Dost AI Assistant! How can our agronomy, pest clinic, mandi, and finance specialists assist your farm today?',
-        agentName: 'triage',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages([welcomeMsg]);
+    const savedHistory = loadSavedItem<Message[]>('kd_chat_history_v2', []);
+    if (savedHistory && savedHistory.length > 0) {
+      setMessages(savedHistory);
     }
   }, []);
 
-  // Persist messages
+  // Save history on changes
   useEffect(() => {
     if (messages.length > 0) {
-      saveItem('kd_assistant_history', messages);
+      saveItem('kd_chat_history_v2', messages);
     }
   }, [messages]);
 
-  // Scroll to bottom on new message
+  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading, activeSpecialist]);
+  }, [messages, isLoading]);
 
-  const quickPrompts = lang === 'ur' ? [
-    'ملتان میں 5 ایکڑ زمین اور محدود پانی ہے، کون سی فصل کاشت کروں؟',
-    'کپاس کے پتے مڑ رہے ہیں اور سفید مکھیاں نظر آ رہی ہیں۔',
-    'ملتان میں گندم کی موجودہ قیمت کیا ہے؟',
-    '5 ایکڑ زمین پر کتنا منافع ہو سکتا ہے؟',
-    'کیا کل ملتان میں بارش کا امکان ہے؟'
-  ] : [
-    'I have 5 acres in Multan and limited water. What should I plant?',
-    'My cotton leaves are curling and I see white insects.',
-    'What is the wheat price in Multan?',
-    'How much profit could I make from 5 acres?',
-    'Will it rain in Multan tomorrow?'
-  ];
+  // Auto-grow textarea
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputText(e.target.value);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
+    }
+  };
 
-  const sendMessage = async (textToSend?: string) => {
-    const query = (textToSend || inputText).trim();
+  const startNewChat = () => {
+    if (speakingMessageId) {
+      window.speechSynthesis?.cancel();
+      setSpeakingMessageId(null);
+    }
+    const newId = 'session_' + Math.random().toString(36).substring(2, 9);
+    setSessionId(newId);
+    saveItem('kd_chat_session_id', newId);
+    setMessages([]);
+    saveItem('kd_chat_history_v2', []);
+  };
+
+  const handleSendMessage = async (customPrompt?: string) => {
+    const query = (customPrompt || inputText).trim();
     if (!query || isLoading) return;
 
-    const userMsg: Message = {
-      id: 'msg_' + Date.now(),
+    if (speakingMessageId) {
+      window.speechSynthesis?.cancel();
+      setSpeakingMessageId(null);
+    }
+
+    const userMessage: Message = {
+      id: 'msg_user_' + Date.now(),
       sender: 'user',
       text: query,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInputText('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
     setIsLoading(true);
-    setLastFailedMessage(null);
-
-    // Dynamic routing indicator
-    setActiveSpecialist('triage');
-    const timer = setTimeout(() => {
-      const q = query.toLowerCase();
-      if (q.includes('curl') || q.includes('leaf') || q.includes('pest') || q.includes('insect') || q.includes('سفید') || q.includes('پتے') || q.includes('کیڑے')) {
-        setActiveSpecialist('pest_doctor');
-      } else if (q.includes('price') || q.includes('rate') || q.includes('mandi') || q.includes('قیمت') || q.includes('ریٹ')) {
-        setActiveSpecialist('market');
-      } else if (q.includes('profit') || q.includes('cost') || q.includes('expense') || q.includes('منافع') || q.includes('خرچہ')) {
-        setActiveSpecialist('finance');
-      } else {
-        setActiveSpecialist('agronomy');
-      }
-    }, 600);
 
     try {
+      // Build conversation history for multi-turn conversational memory
+      const historyPayload = newMessages.slice(-8).map((m) => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text,
+      }));
+
       const res = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          session_id: sessionId,
           message: query,
+          session_id: sessionId,
+          history: historyPayload,
         }),
       });
 
-      if (!res.ok) {
-        throw new Error(`Server returned status: ${res.status}`);
+      if (res.ok) {
+        const data = await res.json();
+        const botMessage: Message = {
+          id: 'msg_agent_' + Date.now(),
+          sender: 'agent',
+          text: data.response || 'No response received.',
+          agentName: data.agent_name || 'agronomy',
+          specialistTitle: data.specialist_title || 'Agronomy Specialist',
+          specialistIcon: data.specialist_icon || '🌾',
+          modelUsed: data.model_used || 'Gemini Multi-Agent',
+          suggestedFollowups: data.suggested_followups || [],
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        setMessages((prev) => [...prev, botMessage]);
+      } else {
+        throw new Error(`Server returned HTTP ${res.status}`);
       }
-
-      const data = await res.json();
-      clearTimeout(timer);
-      setActiveSpecialist(null);
-
-      const agentMsg: Message = {
-        id: 'msg_' + Date.now(),
-        sender: 'agent',
-        text: data.response || 'No response returned.',
-        agentName: data.agent_name || 'triage',
-        toolUsed: data.tool_used,
-        toolData: data.tool_data,
-        disclaimer: data.disclaimer,
-        debugTrace: data.debug_trace,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-
-      setMessages((prev) => [...prev, agentMsg]);
-    } catch {
-      clearTimeout(timer);
-      setActiveSpecialist(null);
-      setLastFailedMessage(query);
-
+    } catch (err: any) {
       const errorMsg: Message = {
-        id: 'err_' + Date.now(),
+        id: 'msg_err_' + Date.now(),
         sender: 'agent',
-        text: lang === 'ur'
-          ? 'معذرت، رابطہ منقطع ہو گیا۔ براہ کرم سرور کنکشن چیک کریں اور دوبارہ کوشش کریں۔'
-          : 'Failed to connect to the Kisan Dost advisory server. Please ensure the backend is running and retry.',
-        agentName: 'triage',
+        text: `⚠️ **Connection Error**: Could not reach Kisan Dost AI server (${err.message}). Please check your connection and tap Regenerate.`,
         isError: true,
+        agentName: 'triage',
+        specialistTitle: 'System Guardrail',
+        specialistIcon: '⚠️',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -175,381 +228,473 @@ export default function AssistantPage() {
     }
   };
 
-  const handleRetry = () => {
-    if (lastFailedMessage) {
-      sendMessage(lastFailedMessage);
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
-  const clearHistory = () => {
-    if (confirm(lang === 'ur' ? 'کیا آپ تمام پیغامات صاف کرنا چاہتے ہیں؟' : 'Clear conversation history?')) {
-      const newId = 'session_' + Math.random().toString(36).substring(2, 9);
-      setSessionId(newId);
-      saveItem('kd_chat_session_id', newId);
-      setMessages([]);
-      saveItem('kd_assistant_history', []);
+  // Copy message text to clipboard
+  const copyToClipboard = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  // Text-To-Speech (Audio Voice Readout in Urdu / English)
+  const toggleSpeech = (id: string, text: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+    if (speakingMessageId === id) {
+      window.speechSynthesis.cancel();
+      setSpeakingMessageId(null);
+      return;
     }
+
+    window.speechSynthesis.cancel();
+    setSpeakingMessageId(id);
+
+    // Strip markdown characters for clean speech synthesis
+    const cleanText = text
+      .replace(/[#*_`~•]/g, '')
+      .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+      .replace(/\n+/g, ' ');
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+
+    // Pick Urdu voice if available, else standard fallback
+    const voices = window.speechSynthesis.getVoices();
+    const urduVoice = voices.find((v) => v.lang.includes('ur') || v.lang.includes('pa'));
+    if (urduVoice) {
+      utterance.voice = urduVoice;
+      utterance.lang = urduVoice.lang;
+    } else {
+      utterance.rate = 0.95;
+    }
+
+    utterance.onend = () => setSpeakingMessageId(null);
+    utterance.onerror = () => setSpeakingMessageId(null);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Speech-To-Text Voice Input via Microphone
+  const toggleListening = () => {
+    if (typeof window === 'undefined') return;
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert('Voice dictation is supported in Chrome, Edge, and modern Android/iOS browsers.');
+      return;
+    }
+
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'ur-PK'; // Supports Urdu & English accents seamlessly
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => setIsListening(false);
+      recognition.onerror = () => setIsListening(false);
+
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0].transcript)
+          .join('');
+        setInputText(transcript);
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.error('Speech recognition error:', err);
+      setIsListening(false);
+    }
+  };
+
+  const handleFeedback = (id: string, type: 'up' | 'down') => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, feedback: m.feedback === type ? null : type } : m))
+    );
+  };
+
+  const renderMarkdownText = (text: string) => {
+    const lines = text.split('\n');
+    return (
+      <div className="space-y-2 text-sm leading-relaxed">
+        {lines.map((line, idx) => {
+          const trimmed = line.trim();
+          if (!trimmed) return <div key={idx} className="h-1.5" />;
+
+          // Heading 3 / bold title
+          if (trimmed.startsWith('### ')) {
+            return (
+              <h4 key={idx} className="text-base font-bold text-slate-900 mt-2 mb-1">
+                {trimmed.replace('### ', '')}
+              </h4>
+            );
+          }
+
+          // Bullet points
+          if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            const content = trimmed.substring(2);
+            return (
+              <div key={idx} className="flex items-start space-x-2 my-0.5">
+                <span className="text-emerald-600 font-bold mt-0.5">•</span>
+                <span className="flex-1">{formatInline(content)}</span>
+              </div>
+            );
+          }
+
+          // Numbered lists
+          const numMatch = trimmed.match(/^(\d+)\.\s*(.*)/);
+          if (numMatch) {
+            return (
+              <div key={idx} className="flex items-start space-x-2 my-1">
+                <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.2 rounded-md text-xs border border-emerald-200 shrink-0">
+                  {numMatch[1]}
+                </span>
+                <span className="flex-1">{formatInline(numMatch[2])}</span>
+              </div>
+            );
+          }
+
+          return <p key={idx}>{formatInline(line)}</p>;
+        })}
+      </div>
+    );
+  };
+
+  const formatInline = (text: string) => {
+    // Basic bold **text** replacement
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <strong key={i} className="font-bold text-slate-900">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      return part;
+    });
   };
 
   return (
     <SaaSLayout
-      title="AI Farmer Assistant"
-      subtitle="Intelligent multi-agent consultation: Agronomy, Pest Clinic, Mandi Rates, and Farm Profit"
-      badge="Google ADK Multi-Agent"
-    >
-        {/* Header Ribbon with Language Toggle and Specialists Directory */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Google ADK Multi-Agent System
-              </span>
-              <span className="text-xs text-slate-500 font-medium">Verified PARC Grounding</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-1 flex items-center gap-2">
-              <span>🌾 Kisan Dost AI Farmer Assistant</span>
-              <span className="text-emerald-700 text-lg font-urdu">(کسان دوست اے آئی مشیر)</span>
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-              Intelligent multi-agent consultation: Agronomy, Pest Clinic, Mandi Rates, and Farm Profit calculations.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5 self-end md:self-center">
-            {/* Language Switcher */}
-            <div className="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200 text-xs font-semibold">
-              <button
-                onClick={() => setLang('ur')}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  lang === 'ur' ? 'bg-emerald-800 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                اردو (Urdu)
-              </button>
-              <button
-                onClick={() => setLang('en')}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  lang === 'en' ? 'bg-emerald-800 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                English
-              </button>
-            </div>
-
-            {/* Developer / ADK Trace Mode Toggle */}
-            <button
-              onClick={() => setDevMode(!devMode)}
-              className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
-                devMode
-                  ? 'bg-indigo-950 text-indigo-300 border-indigo-500 shadow-xs'
-                  : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
-              }`}
-              title="Toggle Google ADK Multi-Agent Tracing Inspector for Judges"
-            >
-              <span>🛠️</span>
-              <span>{devMode ? 'Dev Mode: ON' : 'Dev Mode: OFF'}</span>
-            </button>
-
-            {/* 1-Click Demo Mode Link */}
-            <Link
-              href="/demo"
-              className="px-3 py-1 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-white shadow-xs transition flex items-center gap-1.5"
-              title="Launch Guided 9-Step Hackathon Demo Mode"
-            >
-              <span>🎯</span>
-              <span>Demo Mode</span>
-            </Link>
-
-            {/* Clear History Button */}
-            <button
-              onClick={clearHistory}
-              title="Reset Conversation"
-              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 text-xs transition border border-slate-200"
-            >
-              🔄
-            </button>
-          </div>
+      title="AI Agronomist Chat"
+      subtitle="Real-time multi-agent agricultural assistant powered by Google Gemini"
+      badge="Gemini Flash Multi-Agent"
+      actions={
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={startNewChat}
+            className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-700 transition shadow-2xs"
+          >
+            <Plus className="w-3.5 h-3.5 text-emerald-600" />
+            <span>New Chat</span>
+          </button>
         </div>
+      }
+    >
+      <div className="flex flex-col h-[calc(100vh-140px)] max-w-5xl mx-auto w-full">
+        {/* Chat Message Scroll Area */}
+        <div className="flex-1 overflow-y-auto pr-1 sm:pr-3 space-y-6 pb-4">
+          {/* Empty State / Welcome Starter Grid */}
+          {messages.length === 0 && (
+            <div className="py-6 sm:py-10 space-y-8 animate-in fade-in duration-500">
+              <div className="text-center space-y-3 max-w-xl mx-auto">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-green-500 text-white flex items-center justify-center mx-auto shadow-md shadow-emerald-500/20">
+                  <Sprout className="w-8 h-8" />
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                  Kisan Dost AI Agronomist
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                  Ask any question about crop selection, fertilizer dosages (DAP/Urea), pest diagnosis, wholesale mandi rates, or Punjab government schemes in Urdu, Roman Urdu, or English.
+                </p>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Powered by Google Gemini Multi-Agent Routing</span>
+                </div>
+              </div>
 
-        {/* Specialists Live Roster */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
-          {Object.entries(AGENT_META).map(([key, meta]) => {
-            const isAgentActive = activeSpecialist === key;
+              {/* Starter Prompt Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 max-w-4xl mx-auto">
+                {STARTER_PROMPTS.map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSendMessage(item.prompt)}
+                    className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-emerald-400 hover:shadow-md transition-all text-left group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xl">{item.icon}</span>
+                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 transition-colors" />
+                      </div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                        {item.title}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                        {item.desc}
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-slate-100 text-[10px] font-medium text-emerald-700 truncate">
+                      {item.urdu}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Active Conversation Messages */}
+          {messages.map((msg) => {
+            const isUser = msg.sender === 'user';
+            const isSpeaking = speakingMessageId === msg.id;
+
             return (
               <div
-                key={key}
-                className={`p-2.5 rounded-xl border transition-all flex items-center space-x-2 ${
-                  isAgentActive
-                    ? 'bg-emerald-100/90 border-emerald-500 shadow-xs ring-2 ring-emerald-500/20 scale-[1.02]'
-                    : `${meta.badgeBg} opacity-85 hover:opacity-100`
-                }`}
+                key={msg.id}
+                className={`flex gap-3 sm:gap-4 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in duration-300`}
               >
-                <span className="text-xl">{meta.icon}</span>
-                <div className="min-w-0">
-                  <div className={`text-[11px] font-bold truncate ${meta.color}`}>
-                    {meta.name}
+                {/* Bot Avatar */}
+                {!isUser && (
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-green-500 text-white flex items-center justify-center flex-shrink-0 shadow-xs mt-1">
+                    <Sprout className="w-5 h-5" />
                   </div>
-                  <div className="text-[10px] text-slate-500 font-urdu truncate">
-                    {meta.urdu}
-                  </div>
+                )}
+
+                {/* Message Body Container */}
+                <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[92%] sm:max-w-[85%]`}>
+                  {/* User Message Bubble */}
+                  {isUser ? (
+                    <div className="bg-emerald-600 text-white rounded-3xl rounded-br-xs px-5 py-3.5 shadow-sm text-sm sm:text-base leading-relaxed break-words">
+                      {msg.text}
+                    </div>
+                  ) : (
+                    /* Assistant Message Card (ChatGPT / Gemini Style) */
+                    <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-4 w-full">
+                      {/* Specialist Meta Bar */}
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100 text-xs">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-base">{msg.specialistIcon || '🌾'}</span>
+                          <span className="font-bold text-slate-900">{msg.specialistTitle || 'Agronomy Specialist'}</span>
+                          {msg.modelUsed && (
+                            <span className="hidden sm:inline-block text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
+                              {msg.modelUsed}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-medium">{msg.timestamp}</span>
+                      </div>
+
+                      {/* Message Content */}
+                      <div className="text-slate-800">
+                        {renderMarkdownText(msg.text)}
+                      </div>
+
+                      {/* Contextual Follow-up Chips (Like ChatGPT/Gemini) */}
+                      {msg.suggestedFollowups && msg.suggestedFollowups.length > 0 && (
+                        <div className="pt-3 border-t border-slate-100 space-y-2">
+                          <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">
+                            Suggested Follow-ups (اگلے ممکنہ سوالات)
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {msg.suggestedFollowups.map((chip, cIdx) => (
+                              <button
+                                key={cIdx}
+                                onClick={() => handleSendMessage(chip)}
+                                className="text-xs bg-emerald-50/80 hover:bg-emerald-100 text-emerald-800 font-medium px-3 py-1.5 rounded-xl border border-emerald-200/80 transition-all flex items-center space-x-1.5 text-left"
+                              >
+                                <span>{chip}</span>
+                                <ChevronRight className="w-3 h-3 opacity-60" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Interactive Action Bar (Copy, TTS Audio, Regenerate, Thumbs) */}
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-slate-400 text-xs">
+                        <div className="flex items-center space-x-1 sm:space-x-2">
+                          {/* Copy Button */}
+                          <button
+                            onClick={() => copyToClipboard(msg.id, msg.text)}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 hover:text-slate-700 transition flex items-center space-x-1"
+                            title="Copy response"
+                          >
+                            {copiedId === msg.id ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                <span className="text-[11px] text-emerald-600 font-semibold">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5" />
+                                <span className="text-[11px] hidden sm:inline">Copy</span>
+                              </>
+                            )}
+                          </button>
+
+                          {/* Voice Readout (TTS) */}
+                          <button
+                            onClick={() => toggleSpeech(msg.id, msg.text)}
+                            className={`p-1.5 rounded-lg transition flex items-center space-x-1 ${
+                              isSpeaking
+                                ? 'bg-emerald-100 text-emerald-800 font-semibold'
+                                : 'hover:bg-slate-100 hover:text-slate-700'
+                            }`}
+                            title={isSpeaking ? 'Stop voice' : 'Listen audio'}
+                          >
+                            {isSpeaking ? (
+                              <>
+                                <VolumeX className="w-3.5 h-3.5 text-emerald-700 animate-pulse" />
+                                <span className="text-[11px] text-emerald-800">Stop Audio</span>
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 className="w-3.5 h-3.5" />
+                                <span className="text-[11px] hidden sm:inline">Listen</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Thumbs Feedback */}
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => handleFeedback(msg.id, 'up')}
+                            className={`p-1.5 rounded-lg transition ${
+                              msg.feedback === 'up' ? 'text-emerald-600 bg-emerald-50' : 'hover:bg-slate-100 hover:text-slate-700'
+                            }`}
+                            title="Helpful"
+                          >
+                            <ThumbsUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleFeedback(msg.id, 'down')}
+                            className={`p-1.5 rounded-lg transition ${
+                              msg.feedback === 'down' ? 'text-rose-600 bg-rose-50' : 'hover:bg-slate-100 hover:text-slate-700'
+                            }`}
+                            title="Not helpful"
+                          >
+                            <ThumbsDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <span className="text-[10px] text-slate-400 mt-1 px-1">{msg.timestamp}</span>
                 </div>
+
+                {/* User Avatar */}
+                {isUser && (
+                  <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center flex-shrink-0 shadow-xs mt-1">
+                    <User className="w-5 h-5 text-slate-200" />
+                  </div>
+                )}
               </div>
             );
           })}
+
+          {/* Loading Indicator (Pulsating Gemini Dots) */}
+          {isLoading && (
+            <div className="flex gap-3 sm:gap-4 items-start animate-in fade-in">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-green-500 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                <Sprout className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center space-x-3">
+                <div className="flex space-x-1.5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" />
+                  <div className="w-2 h-2 rounded-full bg-emerald-600 animate-bounce [animation-delay:0.2s]" />
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-bounce [animation-delay:0.4s]" />
+                </div>
+                <span className="text-xs text-slate-500 font-medium">
+                  Kisan Dost is analyzing agronomic benchmarks...
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Chat Window Container */}
-        <div className="flex-1 bg-white border border-slate-200/90 rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-[460px]">
-          {/* Messages Area */}
-          <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 max-h-[560px]">
-            {messages.map((m) => {
-              const isUser = m.sender === 'user';
-              const agent = m.agentName ? AGENT_META[m.agentName] || AGENT_META.triage : AGENT_META.triage;
+        {/* Bottom Floating Input Bar (ChatGPT / Gemini Style) */}
+        <div className="pt-2 sticky bottom-0 bg-[#f4f6f8]/90 backdrop-blur-md">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-md p-2 sm:p-2.5 flex items-end gap-2 focus-within:ring-2 focus-within:ring-emerald-500/30 focus-within:border-emerald-500 transition-all">
+            {/* Microphone Button (Voice Speech-to-Text) */}
+            <button
+              type="button"
+              onClick={toggleListening}
+              className={`p-2.5 rounded-xl sm:rounded-2xl transition-all flex items-center justify-center ${
+                isListening
+                  ? 'bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/30'
+                  : 'text-slate-400 hover:text-emerald-700 hover:bg-slate-100'
+              }`}
+              title={isListening ? 'Listening... Speak in Urdu or English' : 'Voice typing (Urdu/English)'}
+            >
+              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
 
-              return (
-                <div
-                  key={m.id}
-                  className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
-                >
-                  {/* Sender Metadata */}
-                  <div className="flex items-center space-x-1.5 mb-1 px-1">
-                    {!isUser && (
-                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                        <span>{agent.icon}</span>
-                        <span className={agent.color}>{agent.name}</span>
-                        <span className="text-[10px] text-slate-400 font-urdu">({agent.urdu})</span>
-                      </span>
-                    )}
-                    <span className="text-[10px] text-slate-400">{m.timestamp}</span>
-                  </div>
-
-                  {/* Message Bubble */}
-                  <div
-                    className={`max-w-[90%] sm:max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed shadow-xs ${
-                      isUser
-                        ? 'bg-emerald-800 text-white rounded-tr-none font-medium'
-                        : m.isError
-                        ? 'bg-rose-50 border border-rose-200 text-rose-900 rounded-tl-none'
-                        : 'bg-slate-50/90 border border-slate-200/80 text-slate-900 rounded-tl-none'
-                    }`}
-                  >
-                    <div className="whitespace-pre-line break-words">{m.text}</div>
-
-                    {/* Pest Diagnosis Structured Card */}
-                    {m.agentName === 'pest_doctor' && !m.isError && (
-                      <div className="mt-3 p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-950">
-                        <div className="flex items-center justify-between font-bold text-amber-900 mb-1.5 border-b border-amber-200 pb-1">
-                          <span className="flex items-center gap-1.5">🔬 Verified PARC Treatment Guidelines</span>
-                          <span className="bg-amber-200/70 text-amber-900 px-2 py-0.5 rounded text-[10px]">Zero Dosage Hallucination</span>
-                        </div>
-                        <p className="text-[11px] text-amber-900 leading-normal">
-                          Always verify chemical container labels. Wear personal protective equipment (gloves, respirator, goggles) before spraying.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Mandi Structured Card */}
-                    {m.agentName === 'market' && !m.isError && (
-                      <div className="mt-3 p-3 bg-blue-50/80 border border-blue-200 rounded-xl text-xs text-blue-950">
-                        <div className="flex items-center justify-between font-bold text-blue-900 mb-1 border-b border-blue-200 pb-1">
-                          <span className="flex items-center gap-1.5">📈 Mandi Wholesale Benchmark</span>
-                          <span className="bg-blue-200/70 text-blue-900 px-2 py-0.5 rounded text-[10px]">AMIS Punjab</span>
-                        </div>
-                        <p className="text-[11px] text-blue-900">
-                          Official reference prices updated daily. Actual spot rates vary by moisture and grade.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* ADK Multi-Agent Execution Trace & Developer Inspector (Prompt 12) */}
-                    {m.debugTrace && !m.isError && (
-                      <div className="mt-3 pt-2.5 border-t border-slate-200/90 text-xs">
-                        <div className="flex items-center justify-between gap-2">
-                          <button
-                            onClick={() =>
-                              setExpandedTraces((prev) => ({
-                                ...prev,
-                                [m.id]: !(prev[m.id] ?? devMode),
-                              }))
-                            }
-                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-200 transition"
-                          >
-                            <span>🔍</span>
-                            <span>
-                              ADK Trace: {m.debugTrace.selected_agent} ({m.debugTrace.latency_ms} ms)
-                            </span>
-                            <span>{(expandedTraces[m.id] ?? devMode) ? '▲' : '▼'}</span>
-                          </button>
-
-                          <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
-                            <span>🔒</span>
-                            <span>Redacted</span>
-                          </span>
-                        </div>
-
-                        {(expandedTraces[m.id] ?? devMode) && (
-                          <div className="mt-3 p-3 bg-slate-900 text-slate-200 rounded-xl text-xs space-y-3 font-mono shadow-inner border border-slate-800">
-                            {/* Execution Flow Timeline */}
-                            <div>
-                              <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">
-                                Execution Flow:
-                              </div>
-                              <div className="space-y-1 text-[11px]">
-                                {m.debugTrace.execution_flow?.map((step: string, sIdx: number) => (
-                                  <div key={sIdx} className="flex items-center gap-2">
-                                    <span className="text-emerald-500 font-bold">↳</span>
-                                    <span className="text-slate-300">{step}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Handoff Chain */}
-                            {m.debugTrace.handoffs && m.debugTrace.handoffs.length > 0 && (
-                              <div>
-                                <div className="text-[10px] font-bold text-sky-400 uppercase tracking-wider mb-1">
-                                  Agent Handoff Chain:
-                                </div>
-                                <div className="space-y-1 text-[11px]">
-                                  {m.debugTrace.handoffs.map((h: any, hIdx: number) => (
-                                    <div key={hIdx} className="bg-slate-800/80 p-1.5 rounded text-slate-300">
-                                      <span className="text-amber-300 font-bold">{h.from_agent}</span> → <span className="text-emerald-300 font-bold">{h.to_agent}</span>: {h.reason}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Tool Calls */}
-                            {m.debugTrace.tool_calls && m.debugTrace.tool_calls.length > 0 && (
-                              <div>
-                                <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-1">
-                                  Tool Execution & Structured I/O:
-                                </div>
-                                {m.debugTrace.tool_calls.map((tc: any, tcIdx: number) => (
-                                  <div key={tcIdx} className="bg-slate-800/80 p-2 rounded text-[11px] space-y-1">
-                                    <div className="flex items-center justify-between text-slate-200">
-                                      <span className="text-amber-300 font-bold">⚙️ {tc.tool_name}</span>
-                                      <span className="text-emerald-400">{tc.duration_ms} ms</span>
-                                    </div>
-                                    <div className="text-slate-400 text-[10px]">Inputs: {JSON.stringify(tc.tool_inputs)}</div>
-                                    <div className="text-emerald-300 text-[10px]">Results: {JSON.stringify(tc.tool_results)}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Raw JSON inspection toggle */}
-                            <details className="text-[10px]">
-                              <summary className="text-slate-400 cursor-pointer hover:text-slate-200">
-                                View full raw trace JSON
-                              </summary>
-                              <pre className="p-2 bg-slate-950 rounded mt-1 overflow-x-auto text-emerald-400 max-h-40">
-                                {JSON.stringify(m.debugTrace, null, 2)}
-                              </pre>
-                            </details>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Inline Retry Button if Failed */}
-                    {m.isError && (
-                      <div className="mt-2 pt-2 border-t border-rose-200 flex items-center justify-between">
-                        <span className="text-xs text-rose-700">Connection error</span>
-                        <button
-                          onClick={handleRetry}
-                          className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-xs transition"
-                        >
-                          🔄 Retry Query
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Agent Activity Indicator & Shimmer Loading */}
-            {isLoading && (
-              <div className="flex flex-col items-start animate-fade-in">
-                <div className="flex items-center space-x-1.5 mb-1 px-1">
-                  <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-ping"></span>
-                    <span>
-                      {activeSpecialist && AGENT_META[activeSpecialist]
-                        ? `${AGENT_META[activeSpecialist].icon} ${AGENT_META[activeSpecialist].name} is consulting farm records...`
-                        : '🛡️ Triage Agent is analyzing inquiry...'}
-                    </span>
-                  </span>
-                </div>
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl rounded-tl-none p-4 w-64 shadow-xs">
-                  <div className="space-y-2">
-                    <div className="h-2.5 bg-slate-200 rounded-full animate-pulse w-3/4"></div>
-                    <div className="h-2.5 bg-slate-200 rounded-full animate-pulse w-full"></div>
-                    <div className="h-2.5 bg-slate-200 rounded-full animate-pulse w-5/6"></div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Quick Prompt Suggestions */}
-          <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-200/70 overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              💡 {lang === 'ur' ? 'تجویز کردہ سوالات:' : 'Suggested:'}
-            </span>
-            {quickPrompts.map((q, idx) => (
-              <button
-                key={idx}
-                onClick={() => sendMessage(q)}
-                disabled={isLoading}
-                className="px-3 py-1.5 rounded-xl bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 text-xs font-medium transition shadow-2xs text-left"
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-
-          {/* Input Bar */}
-          <div className="p-3 sm:p-4 bg-white border-t border-slate-200 flex items-center gap-2">
-            <input
-              type="text"
+            {/* Expanding Textarea Input */}
+            <textarea
+              ref={textareaRef}
+              rows={1}
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
               placeholder={
-                lang === 'ur'
-                  ? 'یہاں اپنا زرعی سوال لکھیں (مثلاً: کپاس کے پتے پیلے کیوں ہو رہے ہیں؟)...'
-                  : 'Ask about crops, cotton pests, fertilizer calculation, mandi rates, or profit...'
+                isListening
+                  ? 'Listening... Bolain (آپ بولیں، لکھائی خودکار ہو جائے گی)...'
+                  : 'Ask Kisan Dost anything about your crops, fertilizer, mandi rates, or pests...'
               }
-              className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600/40 focus:border-emerald-600 transition"
-              disabled={isLoading}
+              className="flex-1 max-h-36 py-2 px-1 sm:px-2 text-xs sm:text-sm bg-transparent border-0 focus:outline-hidden resize-none text-slate-900 placeholder:text-slate-400"
             />
 
+            {/* Clear Button if text present */}
+            {inputText && (
+              <button
+                type="button"
+                onClick={() => setInputText('')}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 text-xs"
+              >
+                ✕
+              </button>
+            )}
+
+            {/* Send Button */}
             <button
-              onClick={() => sendMessage()}
-              disabled={isLoading || !inputText.trim()}
-              className="px-5 py-3 bg-emerald-800 hover:bg-emerald-900 disabled:bg-slate-300 text-white font-bold text-sm rounded-xl shadow-xs transition flex items-center space-x-1.5 flex-shrink-0"
+              type="button"
+              disabled={!inputText.trim() || isLoading}
+              onClick={() => handleSendMessage()}
+              className="p-2.5 rounded-xl sm:rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-300 text-white transition-all shadow-xs disabled:shadow-none flex items-center justify-center"
+              title="Send message"
             >
-              <span>{lang === 'ur' ? 'ارسال کریں' : 'Send'}</span>
-              <span>→</span>
+              <Send className="w-4 h-4" />
             </button>
           </div>
-        </div>
 
-        {/* Footer Disclaimer */}
-        <div className="mt-3 text-center text-[11px] text-slate-500">
-          ⚠️ Kisan Dost adheres strictly to verified Pakistani Agricultural Research Council (PARC) and provincial agronomy datasets. Dosages must be verified on registered product labels.
+          {/* Footer Subtext Disclaimer */}
+          <div className="text-center py-2 text-[11px] text-slate-400 flex items-center justify-center space-x-2">
+            <span>Kisan Dost is grounded in PARC & Punjab Agri research benchmarks.</span>
+            <span>•</span>
+            <Link href="/observability" className="text-emerald-700 hover:underline inline-flex items-center space-x-0.5">
+              <span>View Multi-Agent Traces</span>
+              <ExternalLink className="w-2.5 h-2.5" />
+            </Link>
+          </div>
         </div>
-      </SaaSLayout>
+      </div>
+    </SaaSLayout>
   );
 }
