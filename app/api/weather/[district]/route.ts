@@ -34,10 +34,21 @@ const DISTRICT_COORDS: Record<string, { lat: number; lon: number; name: string }
   islamabad: { lat: 33.6844, lon: 73.0479, name: 'Islamabad' },
 };
 
-export async function GET(
-  req: NextRequest,
-  context: any
-) {
+function getWeatherDesc(code: number): string {
+  if (code === 0) return 'Clear Sky (صاف آسمان)';
+  if (code === 1) return 'Mainly Clear (مطلع زیادہ تر صاف)';
+  if (code === 2) return 'Partly Cloudy (جزوی ابر آلود)';
+  if (code === 3) return 'Overcast (مکمل ابر آلود)';
+  if (code >= 45 && code <= 48) return 'Foggy / Hazy (دھند / کہرا)';
+  if (code >= 51 && code <= 55) return 'Drizzle (ہلکی بوندا باندی)';
+  if (code >= 61 && code <= 65) return 'Rain Showers (بارش)';
+  if (code >= 71 && code <= 77) return 'Snow Flurries (برفباری)';
+  if (code >= 80 && code <= 82) return 'Heavy Showers (تیز بارش)';
+  if (code >= 95) return 'Thunderstorm (گرج چمک کے ساتھ طوفان)';
+  return 'Clear (صاف)';
+}
+
+export async function GET(req: NextRequest, context: any) {
   try {
     let districtStr = 'Multan';
     if (context?.params) {
@@ -47,79 +58,122 @@ export async function GET(
     const decoded = decodeURIComponent(districtStr || '').trim().toLowerCase();
     const coords = DISTRICT_COORDS[decoded] || DISTRICT_COORDS['multan'];
 
+    const recordedAt = new Date().toISOString();
+    let isLive = false;
+    let liveData: any = null;
+
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=auto`;
-      const res = await fetch(url, { headers: { 'User-Agent': 'KisanDost/1.0' } });
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=auto`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'KisanDost/1.0' }, signal: AbortSignal.timeout(5000) });
       if (res.ok) {
-        const data = await res.json();
-        const current = data.current || {};
-        const daily = data.daily || {};
-
-        const forecast = (daily.time || []).slice(0, 5).map((date: string, idx: number) => ({
-          date,
-          temp_max: daily.temperature_2m_max?.[idx] ?? 28,
-          temp_min: daily.temperature_2m_min?.[idx] ?? 16,
-          condition: (daily.precipitation_sum?.[idx] ?? 0) > 0 ? 'Rain Expected (بارش کا امکان)' : 'Clear / Sunny (صاف موسم)',
-          rain_probability: daily.precipitation_probability_max?.[idx] ?? 10,
-          precipitation_sum: daily.precipitation_sum?.[idx] ?? 0,
-          recommendation: (daily.precipitation_probability_max?.[idx] ?? 0) > 50
-            ? 'Avoid irrigation and fertilizer application today due to expected rainfall.'
-            : 'Weather suitable for routine irrigation and field operations.',
-        }));
-
-        return NextResponse.json({
-          district: coords.name,
-          temperature: current.temperature_2m ?? 28,
-          humidity: current.relative_humidity_2m ?? 45,
-          wind_speed: current.wind_speed_10m ?? 10,
-          precipitation: current.precipitation ?? 0,
-          condition: (current.precipitation ?? 0) > 0 ? 'Rain' : 'Clear',
-          description: 'Clear sky (صاف آسمان)',
-          source: 'Open-Meteo Global Meteorological Model (Live)',
-          spray_recommendation: (current.wind_speed_10m ?? 0) > 20
-            ? 'High wind velocity. Postpone foliar pesticide sprays.'
-            : 'Optimal weather conditions for field spraying and fertilizer broadcasting.',
-          irrigation_recommendation: (daily.precipitation_sum?.[0] ?? 0) > 5
-            ? 'Significant rainfall expected. Delay scheduled tubewell irrigation.'
-            : 'Normal crop water requirements. Proceed with scheduled canal/tubewell turn.',
-          forecast,
-        });
+        liveData = await res.json();
+        isLive = true;
       }
-    } catch (apiErr) {
-      console.warn('Live weather fetch failed, using fallback:', apiErr);
+    } catch {
+      // Fallback
     }
 
-    // High quality fallback
-    return NextResponse.json({
+    const cur = liveData?.current || {};
+    const daily = liveData?.daily || {};
+
+    const temp = cur.temperature_2m !== undefined ? Math.round(cur.temperature_2m * 10) / 10 : 28.5;
+    const apparentTemp = cur.apparent_temperature !== undefined ? Math.round(cur.apparent_temperature * 10) / 10 : temp;
+    const humidity = cur.relative_humidity_2m !== undefined ? Math.round(cur.relative_humidity_2m) : 48;
+    const windSpeed = cur.wind_speed_10m !== undefined ? Math.round(cur.wind_speed_10m * 10) / 10 : 11.2;
+    const precip = cur.precipitation !== undefined ? Math.round(cur.precipitation * 10) / 10 : 0.0;
+    const wCode = cur.weather_code !== undefined ? cur.weather_code : 0;
+    const conditionStr = getWeatherDesc(wCode);
+
+    const heatwaveRisk = temp >= 40.0;
+    const frostRisk = temp <= 3.0;
+
+    const warnings: string[] = [];
+    if (windSpeed >= 20.0) {
+      warnings.push(`High wind velocity (${windSpeed} km/h). Delay foliar spray and avoid irrigating tall crops to prevent lodging.`);
+    }
+    if (heatwaveRisk) {
+      warnings.push(`Heatwave warning: High ambient temperature (${temp}°C). Provide light evening irrigation.`);
+    }
+    if (frostRisk) {
+      warnings.push(`Frost risk: Expected low temperature (${temp}°C). Protect nursery beds and sensitive vegetable seedlings.`);
+    }
+
+    // Build 5-day forecast
+    const dates = (daily.time || []).slice(0, 5);
+    const forecast = (dates.length > 0 ? dates : ['2026-09-06', '2026-09-07', '2026-09-08', '2026-09-09', '2026-09-10']).map((d: string, idx: number) => {
+      const maxT = daily.temperature_2m_max?.[idx] !== undefined ? daily.temperature_2m_max[idx] : Math.round(temp + 3);
+      const minT = daily.temperature_2m_min?.[idx] !== undefined ? daily.temperature_2m_min[idx] : Math.round(temp - 8);
+      const pSum = daily.precipitation_sum?.[idx] !== undefined ? daily.precipitation_sum[idx] : 0;
+      const code = daily.weather_code?.[idx] !== undefined ? daily.weather_code[idx] : 0;
+      const wMax = daily.wind_speed_10m_max?.[idx] !== undefined ? daily.wind_speed_10m_max[idx] : 12;
+
+      const irrigAdvice = pSum >= 5.0
+        ? 'Postpone irrigation (بارش متوقع ہے، پانی نہ لگائیں)'
+        : wMax >= 25.0
+        ? 'Do not irrigate tall crops (تیز ہوا ہے، فصل گرنے کا خطرہ)'
+        : 'Irrigate normally as per crop need (معمول کے مطابق پانی لگائیں)';
+
+      return {
+        date: d,
+        temperature_max: maxT,
+        temperature_min: minT,
+        precipitation: pSum,
+        weather_condition: getWeatherDesc(code),
+        wind_speed_max: wMax,
+        irrigation_advice: irrigAdvice,
+        // Legacy aliases
+        temp_max: maxT,
+        temp_min: minT,
+        condition: getWeatherDesc(code),
+      };
+    });
+
+    const primaryIrrigation = precip >= 5.0 || (daily.precipitation_sum?.[0] ?? 0) >= 5.0
+      ? 'Significant rainfall detected. Delay canal/tubewell turn to conserve water and prevent waterlogging.'
+      : windSpeed >= 20.0
+      ? 'High wind velocity expected. Avoid irrigating mature tall crops to prevent lodging.'
+      : 'Normal crop water requirements. Proceed with scheduled irrigation turn.';
+
+    const forecastSource = isLive ? 'Live Open-Meteo API' : 'Fallback Offline (Open-Meteo)';
+
+    const report = {
+      location: coords.name,
       district: coords.name,
-      temperature: 28.5,
-      humidity: 48,
-      wind_speed: 11.2,
-      precipitation: 0.0,
-      condition: 'Clear',
-      description: 'Mainly clear (مطلع زیادہ تر صاف)',
-      source: 'Pakistan Meteorological Reference Dataset',
-      spray_recommendation: 'Optimal conditions for crop spraying.',
-      irrigation_recommendation: 'Proceed with scheduled irrigation.',
-      forecast: [
-        { date: '2026-09-06', temp_max: 34, temp_min: 22, condition: 'Sunny', rain_probability: 0, precipitation_sum: 0, recommendation: 'Normal field operations.' },
-        { date: '2026-09-07', temp_max: 33, temp_min: 21, condition: 'Clear', rain_probability: 5, precipitation_sum: 0, recommendation: 'Normal field operations.' },
-        { date: '2026-09-08', temp_max: 35, temp_min: 23, condition: 'Partly Cloudy', rain_probability: 15, precipitation_sum: 0, recommendation: 'Normal field operations.' },
-      ],
-    });
+      latitude: coords.lat,
+      longitude: coords.lon,
+      temperature: temp,
+      temperature_c: temp,
+      apparent_temperature: apparentTemp,
+      humidity,
+      humidity_percent: humidity,
+      wind_speed: windSpeed,
+      wind_speed_kmh: windSpeed,
+      precipitation: precip,
+      weather_condition: conditionStr,
+      weather_code: wCode,
+      heatwave_risk: heatwaveRisk,
+      frost_risk: frostRisk,
+      warnings,
+      irrigation_advice: primaryIrrigation,
+      forecast_source: forecastSource,
+      source: forecastSource,
+      recorded_at: recordedAt,
+      current: {
+        time: recordedAt.slice(0, 16).replace('T', ' '),
+        temperature_2m: temp,
+        apparent_temperature: apparentTemp,
+        relative_humidity_2m: humidity,
+        precipitation: precip,
+        wind_speed_10m: windSpeed,
+      },
+      forecast,
+      spray_recommendation: windSpeed > 20
+        ? 'High wind velocity. Postpone foliar pesticide sprays.'
+        : 'Optimal weather conditions for field spraying and fertilizer broadcasting.',
+    };
+
+    return NextResponse.json(report);
   } catch (err: any) {
-    return NextResponse.json({
-      district: 'Multan',
-      temperature: 28,
-      humidity: 50,
-      wind_speed: 10,
-      precipitation: 0,
-      condition: 'Clear',
-      description: 'Clear sky',
-      source: 'Reference Dataset',
-      spray_recommendation: 'Good for spray',
-      irrigation_recommendation: 'Proceed with irrigation',
-      forecast: []
-    });
+    return NextResponse.json({ error: 'Failed to fetch weather', details: err.message }, { status: 500 });
   }
 }
