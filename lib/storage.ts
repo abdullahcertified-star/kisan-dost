@@ -38,3 +38,34 @@ export function clearItem(key: string): void {
     window.sessionStorage.removeItem(key);
   } catch {}
 }
+
+export function isAuthenticated(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const token = window.localStorage.getItem('kisan_auth_token');
+    const profile = window.localStorage.getItem('kisan_farmer_profile');
+    return Boolean(token && profile);
+  } catch {
+    return false;
+  }
+}
+
+export function setAuthSession(token: string, profile: any): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem('kisan_auth_token', token);
+    saveItem('kisan_farmer_profile', profile);
+    document.cookie = `kisan_auth_token=${token}; path=/; max-age=604800; SameSite=Lax`;
+  } catch {}
+}
+
+export function clearAuthSession(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem('kisan_auth_token');
+    window.localStorage.removeItem('kisan_farmer_profile');
+    window.localStorage.removeItem('kd_dashboard_profile');
+    window.localStorage.removeItem('kd_custom_gemini_key');
+    document.cookie = 'kisan_auth_token=; path=/; max-age=0; SameSite=Lax';
+  } catch {}
+}

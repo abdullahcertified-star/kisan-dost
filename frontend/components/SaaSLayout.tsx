@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { loadSavedItem } from '@/lib/storage';
+import FloatingBot from '@/components/FloatingBot';
 import {
   LayoutDashboard,
   Sprout,
@@ -52,16 +53,28 @@ export default function SaaSLayout({
   const [farmZone, setFarmZone] = useState('Punjab Agro Zone');
   const [searchQuery, setSearchQuery] = useState('');
   const [lang, setLang] = useState<'en' | 'ur'>('en');
+  const [authChecked, setAuthChecked] = useState(false);
 
   const handleLogout = () => {
+    localStorage.removeItem('kisan_auth_token');
     localStorage.removeItem('kisan_farmer_profile');
     localStorage.removeItem('kd_dashboard_profile');
     localStorage.removeItem('kd_custom_gemini_key');
+    document.cookie = 'kisan_auth_token=; path=/; max-age=0; SameSite=Lax';
     router.push('/login');
   };
 
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('kisan_auth_token') : null;
     const profile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
+
+    // Route Authorization Guard
+    if (!token && !profile) {
+      router.replace('/login?from=' + encodeURIComponent(pathname || '/'));
+      return;
+    }
+    setAuthChecked(true);
+
     if (profile) {
       if (profile.name) setFarmerName(profile.name);
       if (profile.role) setFarmerRole(profile.role);
@@ -74,7 +87,7 @@ export default function SaaSLayout({
       document.documentElement.setAttribute('dir', savedLang === 'ur' ? 'rtl' : 'ltr');
       document.documentElement.setAttribute('lang', savedLang);
     }
-  }, []);
+  }, [pathname, router]);
 
   const toggleLanguage = (newLang: 'en' | 'ur') => {
     setLang(newLang);
@@ -189,18 +202,21 @@ export default function SaaSLayout({
             })}
           </nav>
 
-          {/* Sidebar Footer AI Quick Link */}
+          {/* Sidebar Footer Logout Button (Bottom Left) */}
           <div className="pt-3 border-t border-slate-100">
-            <Link
-              href="/assistant"
-              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-xs hover:shadow-emerald-500/20 hover:scale-[1.01] transition-all"
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200/80 hover:border-rose-200 transition-all font-semibold text-xs group"
             >
               <div className="flex items-center space-x-2">
-                <Bot className="w-4 h-4 text-emerald-100" />
-                <span className="text-xs font-semibold">AI Agronomist</span>
+                <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center group-hover:bg-rose-200 transition">
+                  <LogOut className="w-3.5 h-3.5" />
+                </div>
+                <span>Logout (لاگ آؤٹ)</span>
               </div>
-              <ArrowRight className="w-3.5 h-3.5 text-emerald-200" />
-            </Link>
+              <span className="text-[10px] text-slate-400 group-hover:text-rose-500 font-normal">Sign Out</span>
+            </button>
           </div>
         </div>
       </aside>
@@ -306,32 +322,8 @@ export default function SaaSLayout({
         </main>
       </div>
 
-      {/* Floating AI Agronomist Bot Button (Floated Bottom-Right with Bot Logo) */}
-      <div className="fixed bottom-6 right-6 z-40 flex items-center group">
-        <Link
-          href="/assistant"
-          id="floating-ai-agronomist-bot"
-          aria-label="Ask AI Agronomist"
-          className="relative flex items-center space-x-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white pl-4 pr-5 py-3 rounded-full shadow-2xl shadow-emerald-700/40 hover:shadow-emerald-500/60 hover:scale-105 active:scale-95 transition-all duration-200 border-2 border-white/25 backdrop-blur-md"
-        >
-          {/* Pulsating Bot Icon */}
-          <div className="relative w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-inner">
-            <Bot className="w-5 h-5 text-white animate-pulse" />
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-300 border-2 border-emerald-800 animate-ping" />
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-300 border-2 border-emerald-800" />
-          </div>
-
-          <div className="text-left leading-none">
-            <div className="flex items-center space-x-1.5 mb-1">
-              <span className="text-xs font-black tracking-wider uppercase text-white">AI Agronomist</span>
-              <span className="text-[9px] bg-emerald-700/80 text-emerald-100 px-1.5 py-0.5 rounded-full font-bold">Bot</span>
-            </div>
-            <span className="text-[10px] text-emerald-100 font-medium">
-              {lang === 'ur' ? 'کسان دوست باٹ سے پوچھیں' : 'Ask farming questions'}
-            </span>
-          </div>
-        </Link>
-      </div>
+      {/* Floating AI Agronomist Bot Button (Floated Bottom-Right, wraps into icon and unwraps on click) */}
+      <FloatingBot />
     </div>
   );
 }
