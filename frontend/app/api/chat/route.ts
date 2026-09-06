@@ -84,8 +84,8 @@ function getGeminiKey(): string | null {
   }
 }
 
-async function callGemini(messages: Array<{ role: string; content: string }>, extraGrounding?: string) {
-  const apiKey = getGeminiKey();
+async function callGemini(messages: Array<{ role: string; content: string }>, extraGrounding?: string, userCustomKey?: string) {
+  const apiKey = (userCustomKey && userCustomKey.trim().length > 10) ? userCustomKey.trim() : getGeminiKey();
   if (!apiKey) return null;
 
   // Working models in priority order
@@ -143,6 +143,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const message = (body.message || '').trim();
     const sessionId = body.session_id || 'session_' + Date.now();
+    const customGeminiKey = (body.custom_gemini_key || req.headers.get('x-gemini-api-key') || '').trim();
     const incomingHistory: Array<{ role: string; content: string }> = body.history || [];
     const lower = message.toLowerCase();
     const lang = detectLanguage(message);
@@ -236,8 +237,8 @@ export async function POST(req: NextRequest) {
       { role: 'user', content: message }
     ];
 
-    // 4. Call Google Gemini LLM with Telemetry Grounding
-    const geminiResult = await callGemini(conversationMessages, extraGrounding);
+    // 4. Call Google Gemini LLM with Telemetry Grounding & Personal API Key
+    const geminiResult = await callGemini(conversationMessages, extraGrounding, customGeminiKey);
 
     if (geminiResult) {
       // Dynamic follow-up generation based on query context
@@ -271,6 +272,7 @@ export async function POST(req: NextRequest) {
         specialist_icon: specialist.icon,
         response: geminiResult.text,
         model_used: geminiResult.model,
+        using_custom_key: Boolean(customGeminiKey && customGeminiKey.length > 10),
         suggested_followups: followups,
         debug_trace: {
           trace_id: 'trc_' + Date.now().toString(36),
@@ -279,6 +281,7 @@ export async function POST(req: NextRequest) {
           latency_ms: 650,
           detected_language: lang,
           telemetry_grounded: Boolean(extraGrounding),
+          using_user_key: Boolean(customGeminiKey && customGeminiKey.length > 10),
         }
       });
     }

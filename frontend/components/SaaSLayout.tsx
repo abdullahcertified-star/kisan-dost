@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { loadSavedItem } from '@/lib/storage';
 import {
   LayoutDashboard,
@@ -25,7 +25,8 @@ import {
   X,
   ArrowRight,
   Globe,
-  User
+  User,
+  LogOut
 } from 'lucide-react';
 
 interface SaaSLayoutProps {
@@ -44,12 +45,20 @@ export default function SaaSLayout({
   actions,
 }: SaaSLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [farmerName, setFarmerName] = useState('Sarah Chen');
   const [farmerRole, setFarmerRole] = useState('Farm Manager');
   const [farmZone, setFarmZone] = useState('Punjab Agro Zone');
   const [searchQuery, setSearchQuery] = useState('');
   const [lang, setLang] = useState<'en' | 'ur'>('en');
+
+  const handleLogout = () => {
+    localStorage.removeItem('kisan_farmer_profile');
+    localStorage.removeItem('kd_dashboard_profile');
+    localStorage.removeItem('kd_custom_gemini_key');
+    router.push('/login');
+  };
 
   useEffect(() => {
     const profile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
@@ -133,18 +142,24 @@ export default function SaaSLayout({
             </button>
           </div>
 
-          {/* User Profile Pill in Sidebar */}
-          <div className="my-4 p-3 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-              {farmerName.charAt(0)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">{farmerName}</p>
-              <p className="text-xs text-slate-500 truncate">{farmerRole}</p>
-            </div>
-            <Link href="/profile" className="text-slate-400 hover:text-emerald-600">
-              <ChevronDown className="w-4 h-4" />
+          {/* User Profile Pill in Sidebar with Quick Logout */}
+          <div className="my-4 p-3 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-between">
+            <Link href="/profile" className="flex items-center space-x-3 min-w-0 flex-1 group">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:scale-105 transition-transform flex-shrink-0">
+                {farmerName.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-emerald-700 transition">{farmerName}</p>
+                <p className="text-xs text-slate-500 truncate">{farmerRole}</p>
+              </div>
             </Link>
+            <button
+              onClick={handleLogout}
+              title="Logout / Sign Out"
+              className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors ml-1"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Navigation Links with Linear Icons */}
@@ -270,15 +285,52 @@ export default function SaaSLayout({
               <span className="text-[10px] text-emerald-600 bg-emerald-100/60 px-1.5 py-0.5 rounded-sm font-bold">Auth</span>
             </Link>
 
+            {/* Header Logout Button */}
+            <button
+              onClick={handleLogout}
+              title="Logout / Sign Out"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200/80 hover:border-rose-200 transition-all text-xs font-semibold"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+
             {/* Extra Action Buttons if passed */}
             {actions && <div className="hidden sm:block">{actions}</div>}
           </div>
         </header>
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl w-full mx-auto pb-24">
           {children}
         </main>
+      </div>
+
+      {/* Floating AI Agronomist Bot Button (Floated Bottom-Right with Bot Logo) */}
+      <div className="fixed bottom-6 right-6 z-40 flex items-center group">
+        <Link
+          href="/assistant"
+          id="floating-ai-agronomist-bot"
+          aria-label="Ask AI Agronomist"
+          className="relative flex items-center space-x-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white pl-4 pr-5 py-3 rounded-full shadow-2xl shadow-emerald-700/40 hover:shadow-emerald-500/60 hover:scale-105 active:scale-95 transition-all duration-200 border-2 border-white/25 backdrop-blur-md"
+        >
+          {/* Pulsating Bot Icon */}
+          <div className="relative w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-inner">
+            <Bot className="w-5 h-5 text-white animate-pulse" />
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-300 border-2 border-emerald-800 animate-ping" />
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-300 border-2 border-emerald-800" />
+          </div>
+
+          <div className="text-left leading-none">
+            <div className="flex items-center space-x-1.5 mb-1">
+              <span className="text-xs font-black tracking-wider uppercase text-white">AI Agronomist</span>
+              <span className="text-[9px] bg-emerald-700/80 text-emerald-100 px-1.5 py-0.5 rounded-full font-bold">Bot</span>
+            </div>
+            <span className="text-[10px] text-emerald-100 font-medium">
+              {lang === 'ur' ? 'کسان دوست باٹ سے پوچھیں' : 'Ask farming questions'}
+            </span>
+          </div>
+        </Link>
       </div>
     </div>
   );

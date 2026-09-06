@@ -30,7 +30,9 @@ import {
   ChevronRight,
   HelpCircle,
   ExternalLink,
-  Info
+  Info,
+  Key,
+  X
 } from 'lucide-react';
 
 interface Message {
@@ -102,9 +104,17 @@ export default function AssistantPage() {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [customApiKey, setCustomApiKey] = useState('');
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [inputKey, setInputKey] = useState('');
+  const [keySavedToast, setKeySavedToast] = useState(false);
 
-  // Initialize session & load chat history
+  // Initialize session & load chat history and custom Gemini Key
   useEffect(() => {
+    const savedKey = localStorage.getItem('kd_custom_gemini_key') || '';
+    setCustomApiKey(savedKey);
+    setInputKey(savedKey);
+
     const savedSession = loadSavedItem<string>('kd_chat_session_id', '');
     if (savedSession) {
       setSessionId(savedSession);
@@ -184,13 +194,19 @@ export default function AssistantPage() {
         content: m.text,
       }));
 
+      const userGeminiKey = localStorage.getItem('kd_custom_gemini_key') || customApiKey || '';
+
       const res = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(userGeminiKey ? { 'x-gemini-api-key': userGeminiKey } : {})
+        },
         body: JSON.stringify({
           message: query,
           session_id: sessionId,
           history: historyPayload,
+          custom_gemini_key: userGeminiKey,
         }),
       });
 
@@ -395,6 +411,20 @@ export default function AssistantPage() {
       badge="Gemini Flash Multi-Agent"
       actions={
         <div className="flex items-center space-x-2">
+          {/* Google AI Studio Key Button */}
+          <button
+            onClick={() => setShowKeyModal(true)}
+            title="Configure Google AI Studio Gemini API Key"
+            className="flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 transition"
+          >
+            <Key className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="hidden md:inline">
+              {customApiKey ? 'Google AI Studio: Connected' : 'Google AI Studio Key'}
+            </span>
+            <span className="md:hidden">API Key</span>
+            {customApiKey && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
+          </button>
+
           <button
             onClick={startNewChat}
             className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-700 transition shadow-2xs"
@@ -406,6 +436,100 @@ export default function AssistantPage() {
       }
     >
       <div className="flex flex-col h-[calc(100vh-140px)] max-w-5xl mx-auto w-full">
+        {/* Google AI Studio API Key Configuration Modal */}
+        {showKeyModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+            <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-4 relative">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                    <Key className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Google AI Studio Gemini Key</h3>
+                    <p className="text-[11px] text-slate-500">Direct integration for AI Agronomist chatbot</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowKeyModal(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <p className="text-slate-600 leading-relaxed">
+                  Enter your personal Google Gemini API Key from Google AI Studio. When set, all your agronomic and multi-agent inquiries will be sent directly through your API quota.
+                </p>
+
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-1.5 text-xs font-bold text-emerald-700 hover:underline"
+                >
+                  <span>Get your free Gemini Key from Google AI Studio</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+
+                <div className="space-y-1 pt-1">
+                  <label className="font-semibold text-slate-700">Gemini API Key</label>
+                  <input
+                    type="password"
+                    value={inputKey}
+                    onChange={(e) => setInputKey(e.target.value)}
+                    placeholder="Enter your Gemini key (e.g. AIzaSy...)"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:border-emerald-500 text-xs font-mono text-slate-800"
+                  />
+                </div>
+
+                {keySavedToast && (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center space-x-1.5 animate-in fade-in">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span>Gemini API Key saved and activated!</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputKey('');
+                    localStorage.removeItem('kd_custom_gemini_key');
+                    setCustomApiKey('');
+                    setShowKeyModal(false);
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
+                >
+                  Clear Key
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const trimmed = inputKey.trim();
+                    if (trimmed) {
+                      localStorage.setItem('kd_custom_gemini_key', trimmed);
+                      setCustomApiKey(trimmed);
+                    } else {
+                      localStorage.removeItem('kd_custom_gemini_key');
+                      setCustomApiKey('');
+                    }
+                    setKeySavedToast(true);
+                    setTimeout(() => {
+                      setKeySavedToast(false);
+                      setShowKeyModal(false);
+                    }, 800);
+                  }}
+                  className="px-4 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition"
+                >
+                  Save &amp; Connect Key
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Chat Message Scroll Area */}
         <div className="flex-1 overflow-y-auto pr-1 sm:pr-3 space-y-6 pb-4">
           {/* Empty State / Welcome Starter Grid */}

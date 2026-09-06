@@ -18,33 +18,58 @@ import {
   CheckCircle2,
   Play,
   Pause,
-  Maximize2,
   Volume2,
   VolumeX,
   Bot,
   Wheat,
   Activity,
   Zap,
-  Globe
+  Globe,
+  Key,
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
+
+const PAKISTAN_DISTRICTS = [
+  'Faisalabad', 'Multan', 'Lahore', 'Bahawalpur', 'Sargodha', 'Sahiwal',
+  'Khanewal', 'Vehari', 'Lodhran', 'Jhang', 'Okara', 'Pakpattan',
+  'Sheikhupura', 'Kasur', 'Gujranwala', 'Rawalpindi', 'Attock', 'Chakwal',
+  'Mianwali', 'Bhakkar', 'Layyah', 'Muzaffargarh', 'D.G. Khan', 'Rajanpur',
+  'Rahim Yar Khan', 'Peshawar', 'Quetta', 'Karachi', 'Hyderabad', 'Sukkur', 'Islamabad'
+];
+
+const MAJOR_CROPS = [
+  'Wheat (گندم)',
+  'Cotton (کپاس)',
+  'Rice / Basmati (چاول)',
+  'Sugarcane (کماد)',
+  'Maize / Corn (مکئی)',
+  'Mustard / Canola (سرسوں / رایا)',
+  'Vegetables & Potatoes (سبزیاں و آلو)',
+  'Citrus & Mango Orchards (باغات)'
+];
 
 export default function LoginPage({ initialIsRegister = false }: { initialIsRegister?: boolean }) {
   const router = useRouter();
   const [isRegister, setIsRegister] = useState(initialIsRegister);
   const [showPassword, setShowPassword] = useState(false);
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [videoPlaying, setVideoPlaying] = useState(true);
   const [videoMuted, setVideoMuted] = useState(true);
   const [lang, setLang] = useState<'en' | 'ur'>('en');
 
   // Form Fields
-  const [phoneOrEmail, setPhoneOrEmail] = useState('0300-1234567');
-  const [password, setPassword] = useState('kisan123');
-  const [name, setName] = useState('Chaudhry Tariq');
-  const [district, setDistrict] = useState('Multan');
-  const [acres, setAcres] = useState(15);
-  const [crop, setCrop] = useState('Wheat & Cotton');
+  const [phoneOrEmail, setPhoneOrEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [district, setDistrict] = useState('Faisalabad');
+  const [acres, setAcres] = useState<number | string>(5);
+  const [crop, setCrop] = useState('Wheat (گندم)');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [useCommunityKey, setUseCommunityKey] = useState(false);
 
-  // Post-Login Cinematic Launch Sequence State
+  // Status & Feedback
+  const [authError, setAuthError] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authStep, setAuthStep] = useState(0);
   const [authProgress, setAuthProgress] = useState(0);
@@ -54,6 +79,12 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
   useEffect(() => {
     const savedLang = localStorage.getItem('kd_lang') as 'en' | 'ur' | null;
     if (savedLang) setLang(savedLang);
+
+    // If an existing custom key exists in localStorage, pre-fill it
+    const existingKey = localStorage.getItem('kd_custom_gemini_key');
+    if (existingKey) {
+      setGeminiApiKey(existingKey);
+    }
   }, []);
 
   const toggleVideoPlayback = () => {
@@ -75,57 +106,51 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     }
   };
 
-  // Quick Demo Logins
-  const handleQuickLogin = (presetName: string, presetDist: string, presetAcres: number, presetCrop: string) => {
-    setName(presetName);
-    setDistrict(presetDist);
-    setAcres(presetAcres);
-    setCrop(presetCrop);
-    setPhoneOrEmail('0300-7654321');
-    setPassword('kisan123');
-    triggerCinematicLogin(presetName, presetDist, presetAcres, presetCrop);
-  };
-
   // Cinematic Post-Login Orchestration
   const triggerCinematicLogin = (
-    finalName = name,
-    finalDist = district,
-    finalAcres = acres,
-    finalCrop = crop
+    finalName: string,
+    finalDist: string,
+    finalAcres: number | string,
+    finalCrop: string,
+    finalApiKey: string
   ) => {
     setIsAuthenticating(true);
     setAuthStep(1);
-    setAuthProgress(15);
+    setAuthProgress(20);
 
     // Save profile to local storage
     const profile = {
       name: finalName,
       district: finalDist,
-      land_acres: finalAcres,
+      land_acres: Number(finalAcres) || 5,
       current_crop: finalCrop,
-      role: 'Farm Manager',
+      role: 'Farm Manager & Owner',
       phone: phoneOrEmail,
     };
     saveItem('kisan_farmer_profile', profile);
     saveItem('kd_dashboard_profile', {
       district: finalDist,
-      acres: finalAcres,
+      acres: Number(finalAcres) || 5,
       crop: finalCrop,
-      season: 'Kharif',
+      season: 'Kharif 2026',
       soil: 'Loam (Mera)',
       water: 'Canal + Tube Well',
     });
 
-    // Step 2: Telemetry Radar Link
+    if (finalApiKey && finalApiKey.trim().length > 5) {
+      localStorage.setItem('kd_custom_gemini_key', finalApiKey.trim());
+    }
+
+    // Step 2: Authenticate Gemini Key
     setTimeout(() => {
       setAuthStep(2);
-      setAuthProgress(45);
+      setAuthProgress(50);
     }, 700);
 
-    // Step 3: Multi-Agent AI Handshake
+    // Step 3: Satellite Telemetry Link
     setTimeout(() => {
       setAuthStep(3);
-      setAuthProgress(75);
+      setAuthProgress(80);
     }, 1400);
 
     // Step 4: Final Launch
@@ -137,12 +162,97 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     // Redirect to Dashboard
     setTimeout(() => {
       router.push('/');
-    }, 2700);
+    }, 2800);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    triggerCinematicLogin();
+    setAuthError('');
+
+    if (!phoneOrEmail.trim()) {
+      setAuthError(lang === 'ur' ? 'برائے مہربانی موبائل نمبر یا ای میل درج کریں۔' : 'Please enter your phone number or email.');
+      return;
+    }
+    if (!password.trim()) {
+      setAuthError(lang === 'ur' ? 'پاس ورڈ درج کریں۔' : 'Please enter your password.');
+      return;
+    }
+
+    const registeredUsers = loadSavedItem<any[]>('kisan_registered_farmers', []);
+    const matchedUser = registeredUsers.find(
+      (u) => (u.phone === phoneOrEmail.trim() || u.email === phoneOrEmail.trim()) && u.password === password
+    );
+
+    if (registeredUsers.length > 0 && !matchedUser) {
+      setAuthError(
+        lang === 'ur'
+          ? 'موبائل نمبر یا پاس ورڈ درست نہیں ہے۔ اگر آپ نئے کسان ہیں تو رجسٹر پر کلک کریں۔'
+          : 'Invalid credentials. If you are a new farmer, please switch to Register.'
+      );
+      return;
+    }
+
+    // Validated login
+    const targetName = matchedUser?.name || 'Farmer ' + phoneOrEmail.split('@')[0];
+    const targetDistrict = matchedUser?.district || district;
+    const targetAcres = matchedUser?.acres || acres;
+    const targetCrop = matchedUser?.crop || crop;
+    const targetKey = matchedUser?.geminiApiKey || geminiApiKey || localStorage.getItem('kd_custom_gemini_key') || '';
+
+    triggerCinematicLogin(targetName, targetDistrict, targetAcres, targetCrop, targetKey);
+  };
+
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+
+    if (!name.trim()) {
+      setAuthError(lang === 'ur' ? 'برائے مہربانی اپنا نام درج کریں۔' : 'Please enter your full name.');
+      return;
+    }
+    if (!phoneOrEmail.trim()) {
+      setAuthError(lang === 'ur' ? 'موبائل نمبر یا ای میل درج کریں۔' : 'Please enter your phone number or email.');
+      return;
+    }
+    if (password.length < 4) {
+      setAuthError(lang === 'ur' ? 'پاس ورڈ کم از کم 4 حروف کا ہونا چاہیے۔' : 'Password must be at least 4 characters long.');
+      return;
+    }
+
+    // Check Gemini API Key
+    if (!useCommunityKey && (!geminiApiKey || geminiApiKey.trim().length < 8)) {
+      setAuthError(
+        lang === 'ur'
+          ? 'برائے مہربانی گوگل اے آئی اسٹوڈیو سے حاصل کردہ جیمنائی API Key درج کریں، یا نیچے "کمیونٹی کی" کا آپشن منتخب کریں۔'
+          : 'Please enter your Google Gemini API Key from Google AI Studio, or enable the community fallback option.'
+      );
+      return;
+    }
+
+    // Save to registered farmers list
+    const registeredUsers = loadSavedItem<any[]>('kisan_registered_farmers', []);
+    const existingIndex = registeredUsers.findIndex(u => u.phone === phoneOrEmail.trim() || u.email === phoneOrEmail.trim());
+
+    const newUser = {
+      name: name.trim(),
+      district,
+      acres: Number(acres) || 5,
+      crop,
+      phone: phoneOrEmail.trim(),
+      email: phoneOrEmail.trim(),
+      password,
+      geminiApiKey: geminiApiKey.trim(),
+      registeredAt: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      registeredUsers[existingIndex] = newUser;
+    } else {
+      registeredUsers.push(newUser);
+    }
+    saveItem('kisan_registered_farmers', registeredUsers);
+
+    triggerCinematicLogin(name.trim(), district, Number(acres) || 5, crop, geminiApiKey.trim());
   };
 
   return (
@@ -162,17 +272,17 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
 
             <div className="space-y-1.5">
               <h3 className="text-xl font-black text-white tracking-tight">
-                {lang === 'ur' ? 'کسان دوست سسٹم کنیکٹ ہو رہا ہے...' : 'Initializing Kisan Dost Farm OS'}
+                {lang === 'ur' ? 'کسان دوست سسٹم کنیکٹ ہو رہا ہے...' : 'Calibrating Kisan Dost Farm OS'}
               </h3>
               <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider">
-                {name} • {district} Agro Zone ({acres} Acres)
+                {name || 'Registered Farmer'} • {district} Agro Zone ({acres} Acres)
               </p>
             </div>
 
             {/* Cinematic Progress Bar */}
             <div className="space-y-2 text-left">
               <div className="flex justify-between text-xs text-slate-400 font-mono">
-                <span>SYSTEM STATUS</span>
+                <span>INITIALIZATION STATUS</span>
                 <span className="text-emerald-400 font-bold">{authProgress}%</span>
               </div>
               <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700/60">
@@ -187,15 +297,17 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
             <div className="space-y-2.5 text-xs text-left">
               <div className={`flex items-center space-x-2.5 transition-colors ${authStep >= 1 ? 'text-emerald-300 font-semibold' : 'text-slate-600'}`}>
                 <CheckCircle2 className={`w-4 h-4 ${authStep >= 1 ? 'text-emerald-400' : 'text-slate-700'}`} />
-                <span>1. Authenticating farmer credentials & biometric keys</span>
+                <span>1. Verifying farmer identity & credentials</span>
               </div>
               <div className={`flex items-center space-x-2.5 transition-colors ${authStep >= 2 ? 'text-emerald-300 font-semibold' : 'text-slate-600'}`}>
                 <CheckCircle2 className={`w-4 h-4 ${authStep >= 2 ? 'text-emerald-400' : 'text-slate-700'}`} />
-                <span>2. Connecting to Open-Meteo satellite & soil radar</span>
+                <span>
+                  2. {geminiApiKey && !useCommunityKey ? 'Connecting Google AI Studio Gemini API Key' : 'Activating Shared Gemini Multi-Agent Routing'}
+                </span>
               </div>
               <div className={`flex items-center space-x-2.5 transition-colors ${authStep >= 3 ? 'text-emerald-300 font-semibold' : 'text-slate-600'}`}>
                 <CheckCircle2 className={`w-4 h-4 ${authStep >= 3 ? 'text-emerald-400' : 'text-slate-700'}`} />
-                <span>3. Grounding Google Gemini multi-agent agronomy engine</span>
+                <span>3. Connecting to Open-Meteo satellite & soil radar</span>
               </div>
               <div className={`flex items-center space-x-2.5 transition-colors ${authStep >= 4 ? 'text-emerald-300 font-semibold' : 'text-slate-600'}`}>
                 <CheckCircle2 className={`w-4 h-4 ${authStep >= 4 ? 'text-emerald-400' : 'text-slate-700'}`} />
@@ -206,10 +318,10 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
         </div>
       )}
 
-      {/* Main Two-Column Split Layout */}
+      {/* Main Split Layout */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-screen">
-        {/* Left Column: Atmospheric Cinematic Video / Drone HUD (55% on desktop) */}
-        <div className="relative lg:w-[55%] min-h-[360px] lg:min-h-screen bg-slate-900 overflow-hidden flex flex-col justify-between p-6 sm:p-10">
+        {/* Left Column: Atmospheric Cinematic Video & HUD Telemetry */}
+        <div className="relative lg:w-[50%] min-h-[360px] lg:min-h-screen bg-slate-900 overflow-hidden flex flex-col justify-between p-6 sm:p-10">
           {/* Looping Atmospheric Background Video */}
           <div className="absolute inset-0 z-0">
             <video
@@ -219,7 +331,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
               muted={videoMuted}
               playsInline
               poster="/images/auth-hero.jpg"
-              className="w-full h-full object-cover scale-105 filter brightness-85 contrast-105"
+              className="w-full h-full object-cover scale-105 filter brightness-80 contrast-105"
             >
               <source
                 src="https://assets.mixkit.co/videos/preview/mixkit-aerial-view-of-a-green-field-41484-large.mp4"
@@ -232,7 +344,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
             </video>
             {/* Cinematic Gradient Overlays */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-slate-950/60" />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/70 via-transparent to-slate-950 lg:to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-transparent to-slate-950 lg:to-transparent" />
             {/* Holographic Radar Scan Grid Lines */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#22c55e10_1px,transparent_1px),linear-gradient(to_bottom,#22c55e10_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-75 pointer-events-none" />
           </div>
@@ -255,82 +367,88 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
             <div className="flex items-center space-x-2 bg-slate-900/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/60 text-xs">
               <button
                 onClick={toggleVideoPlayback}
-                className="text-slate-300 hover:text-white transition"
-                title={videoPlaying ? 'Pause ambient video' : 'Play ambient video'}
+                className="text-slate-300 hover:text-white transition p-1"
+                title={videoPlaying ? 'Pause video' : 'Play video'}
               >
                 {videoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
               </button>
+              <span className="w-px h-3 bg-slate-700" />
               <button
                 onClick={toggleVideoAudio}
-                className="text-slate-300 hover:text-white transition"
-                title={videoMuted ? 'Unmute' : 'Mute'}
+                className="text-slate-300 hover:text-white transition p-1"
+                title={videoMuted ? 'Unmute video audio' : 'Mute video audio'}
               >
                 {videoMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
               </button>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-1" />
-              <span className="text-[10px] text-emerald-300 font-mono hidden sm:inline">LIVE CAM</span>
             </div>
           </div>
 
-          {/* Center Cinematic Callout */}
-          <div className="relative z-10 my-auto py-12 max-w-lg space-y-4">
-            <div className="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 px-3.5 py-1 rounded-full text-xs font-semibold backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Grounded in Punjab Agriculture &amp; AMIS</span>
+          {/* Bottom Telemetry HUD Overlay */}
+          <div className="relative z-10 space-y-4 pt-12">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center space-x-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Radar: {district} Zone</span>
+              </div>
+              <div className="inline-flex items-center space-x-1.5 bg-slate-900/60 text-slate-300 border border-slate-700/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Google AI Studio Powered</span>
+              </div>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-              Precision Agriculture for Pakistani Farmers
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-md">
-              Real-time multi-agent agronomy, verified fertilizer dosing, crop suitability scoring, and daily wholesale mandi rates powered by Google Gemini.
-            </p>
 
-            {/* Live Drone Telemetry Pills */}
-            <div className="pt-2 flex flex-wrap gap-2.5 text-[11px] font-mono">
-              <span className="px-3 py-1 rounded-lg bg-black/40 backdrop-blur-md border border-slate-700/70 text-slate-300 flex items-center space-x-1.5">
-                <Activity className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Radar: Multan (30.15° N)</span>
-              </span>
-              <span className="px-3 py-1 rounded-lg bg-black/40 backdrop-blur-md border border-slate-700/70 text-slate-300 flex items-center space-x-1.5">
-                <Zap className="w-3.5 h-3.5 text-amber-400" />
-                <span>Soil Moisture: 38% Optimal</span>
-              </span>
+            <div className="max-w-lg space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+                {lang === 'ur' ? 'جدید ڈیجیٹل زراعت کا آغاز کسان دوست کے ساتھ' : 'Intelligent Agricultural OS Built for Pakistani Farmers'}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Connect your Google Gemini API key to unlock individualized crop recommendations, live weather radar, pest diagnosis, and wholesale mandi pricing.
+              </p>
             </div>
-          </div>
-
-          {/* Bottom Live Watermark */}
-          <div className="relative z-10 flex items-center justify-between text-xs text-slate-400 pt-4 border-t border-slate-800/80">
-            <span className="flex items-center space-x-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Zero-Leak Agricultural Security Standard</span>
-            </span>
-            <span className="font-mono text-[10px] text-slate-500">v1.0 • Kharif 2026</span>
           </div>
         </div>
 
-        {/* Right Column: Modern Glassmorphic Login/Register Form (45% on desktop) */}
-        <div className="lg:w-[45%] bg-slate-950 flex flex-col justify-center px-6 sm:px-12 lg:px-14 py-12 relative z-20">
-          <div className="max-w-md w-full mx-auto space-y-7">
+        {/* Right Column: Real Authentication & Gemini Setup Card (50% on desktop) */}
+        <div className="lg:w-[50%] flex flex-col justify-center px-4 sm:px-10 lg:px-12 py-10 bg-slate-950 overflow-y-auto max-h-screen">
+          <div className="w-full max-w-md mx-auto space-y-6">
             {/* Header / Mode Switcher */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-400 tracking-wider uppercase">
-                  {isRegister ? 'New Farmer Onboarding' : 'Welcome Back'}
-                </span>
-                {/* Language Switch */}
-                <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-xs">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white tracking-tight">
+                      {isRegister ? 'Register Farmer Profile' : 'Farmer Sign In'}
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                      {isRegister ? 'Set up your farm profile & Gemini API Key' : 'Enter your credentials to access Farm OS'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Language Pill */}
+                <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
                   <button
-                    onClick={() => setLang('en')}
-                    className={`px-2 py-0.5 rounded-md font-semibold transition ${
-                      lang === 'en' ? 'bg-emerald-600 text-white' : 'text-slate-400'
+                    type="button"
+                    onClick={() => {
+                      setLang('en');
+                      localStorage.setItem('kd_lang', 'en');
+                    }}
+                    className={`px-2 py-0.5 rounded-lg font-semibold transition ${
+                      lang === 'en' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     EN
                   </button>
                   <button
-                    onClick={() => setLang('ur')}
-                    className={`px-2 py-0.5 rounded-md font-semibold transition ${
-                      lang === 'ur' ? 'bg-emerald-600 text-white' : 'text-slate-400'
+                    type="button"
+                    onClick={() => {
+                      setLang('ur');
+                      localStorage.setItem('kd_lang', 'ur');
+                    }}
+                    className={`px-2 py-0.5 rounded-lg font-semibold transition ${
+                      lang === 'ur' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     اردو
@@ -338,56 +456,55 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                 </div>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                {isRegister
-                  ? lang === 'ur'
-                    ? 'کسان رجسٹریشن'
-                    : 'Create Farmer Account'
-                  : lang === 'ur'
-                  ? 'کسان لاگ ان'
-                  : 'Sign in to Farm OS'}
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-400">
-                {isRegister
-                  ? 'Set up your acreage and district for personalized AI recommendations.'
-                  : 'Access your field telemetry, fertilizer plans, and mandi intelligence.'}
-              </p>
-
-              {/* Mode Toggle Tabs */}
-              <div className="grid grid-cols-2 p-1 rounded-2xl bg-slate-900 border border-slate-800 text-xs font-bold">
+              {/* Mode Tabs */}
+              <div className="grid grid-cols-2 p-1 bg-slate-900/90 rounded-2xl border border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setIsRegister(false)}
-                  className={`py-2 rounded-xl transition ${
+                  onClick={() => {
+                    setIsRegister(false);
+                    setAuthError('');
+                  }}
+                  className={`py-2 text-xs font-bold rounded-xl transition-all ${
                     !isRegister
-                      ? 'bg-emerald-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {lang === 'ur' ? 'لاگ ان (Sign In)' : 'Sign In'}
+                  Sign In (لاگ اِن)
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsRegister(true)}
-                  className={`py-2 rounded-xl transition ${
+                  onClick={() => {
+                    setIsRegister(true);
+                    setAuthError('');
+                  }}
+                  className={`py-2 text-xs font-bold rounded-xl transition-all ${
                     isRegister
-                      ? 'bg-emerald-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {lang === 'ur' ? 'نیا کسان (Register)' : 'Register Farmer'}
+                  Register Farmer (نیا کسان)
                 </button>
               </div>
             </div>
 
-            {/* Interactive Form */}
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs sm:text-sm">
-              {/* Registration Extra Fields */}
+            {/* Error Banner */}
+            {authError && (
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-start space-x-2.5 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{authError}</span>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4">
               {isRegister && (
-                <div className="space-y-4 animate-in fade-in duration-300">
-                  <div>
-                    <label className="block font-semibold text-slate-300 mb-1.5">
-                      Farmer Full Name (کسان کا نام)
+                <>
+                  {/* Farmer Full Name */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Full Name (کسان کا نام) <span className="text-rose-400">*</span>
                     </label>
                     <div className="relative">
                       <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -396,56 +513,76 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Chaudhry Tariq"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white placeholder:text-slate-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+                        placeholder="e.g. Muhammad Usman"
+                        className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white placeholder:text-slate-600 transition"
                       />
                     </div>
                   </div>
 
+                  {/* District & Acres */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1.5">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-300">
                         District (ضلع)
                       </label>
                       <div className="relative">
-                        <MapPin className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <MapPin className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                         <select
                           value={district}
                           onChange={(e) => setDistrict(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+                          className="w-full pl-8 pr-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white appearance-none"
                         >
-                          <option value="Multan">Multan (ملتان)</option>
-                          <option value="Faisalabad">Faisalabad (فیصل آباد)</option>
-                          <option value="Lahore">Lahore (لاہور)</option>
-                          <option value="Sargodha">Sargodha (سرگودھا)</option>
-                          <option value="Bahawalpur">Bahawalpur (بہاولپور)</option>
-                          <option value="Rahim Yar Khan">Rahim Yar Khan (رحیم یار خان)</option>
-                          <option value="Sahiwal">Sahiwal (ساہیوال)</option>
+                          {PAKISTAN_DISTRICTS.map((dist) => (
+                            <option key={dist} value={dist}>
+                              {dist}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1.5">
-                        Land Acres (ایکڑ)
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-300">
+                        Land Holdings (ایکڑ)
                       </label>
                       <input
                         type="number"
-                        min="0.5"
-                        max="500"
+                        min="1"
+                        max="5000"
                         value={acres}
-                        onChange={(e) => setAcres(Number(e.target.value))}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+                        onChange={(e) => setAcres(e.target.value)}
+                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white"
                       />
                     </div>
                   </div>
-                </div>
+
+                  {/* Primary Crop */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Primary Crop (اہم فصل)
+                    </label>
+                    <div className="relative">
+                      <Wheat className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                      <select
+                        value={crop}
+                        onChange={(e) => setCrop(e.target.value)}
+                        className="w-full pl-8 pr-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white appearance-none"
+                      >
+                        {MAJOR_CROPS.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </>
               )}
 
-              {/* Phone or Email Input */}
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1.5">
-                  Mobile Number / Email (فون نمبر یا ای میل)
+              {/* Phone or Email */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300">
+                  Mobile Number / Email (فون نمبر یا ای میل) <span className="text-rose-400">*</span>
                 </label>
                 <div className="relative">
                   <Phone className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -454,26 +591,22 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                     required
                     value={phoneOrEmail}
                     onChange={(e) => setPhoneOrEmail(e.target.value)}
-                    placeholder="0300-1234567 or farmer@pakagri.pk"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white placeholder:text-slate-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+                    placeholder="e.g. 0300-1234567 or farmer@gmail.com"
+                    className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white placeholder:text-slate-600 transition"
                   />
                 </div>
               </div>
 
-              {/* Password Input */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="font-semibold text-slate-300">
-                    Password (پاس ورڈ)
+              {/* Password */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-300">
+                    Password (پاس ورڈ) <span className="text-rose-400">*</span>
                   </label>
                   {!isRegister && (
-                    <button
-                      type="button"
-                      onClick={() => alert('Demo Mode: Enter password kisan123 or select a Quick Login profile below.')}
-                      className="text-xs text-emerald-400 hover:underline"
-                    >
-                      Forgot?
-                    </button>
+                    <span className="text-[11px] text-emerald-400 cursor-pointer hover:underline">
+                      Forgot Password?
+                    </span>
                   )}
                 </div>
                 <div className="relative">
@@ -484,66 +617,111 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white placeholder:text-slate-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500"
+                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white placeholder:text-slate-600 transition"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
+              {/* GOOGLE AI STUDIO GEMINI API KEY STEP (Prompted on Register or Available on Login) */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-900/90 border border-emerald-500/30 space-y-3 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                      <Key className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white flex items-center space-x-1.5">
+                        <span>Google AI Studio Gemini API Key</span>
+                        <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full font-semibold">
+                          Required for AI Bot
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {lang === 'ur'
+                          ? 'جیمنائی API Key درج کریں تاکہ چیٹ باٹ آپ کی ذاتی کی سے براہِ راست جواب دے۔'
+                          : 'Enter your Gemini API key so our AI Agronomist answers directly from your quota.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Direct link to Google AI Studio */}
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+                >
+                  <span>Get your free Gemini API Key from Google AI Studio</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+
+                {/* API Key Input */}
+                <div className="relative">
+                  <input
+                    type={showGeminiKey ? 'text' : 'password'}
+                    value={geminiApiKey}
+                    disabled={useCommunityKey}
+                    onChange={(e) => setGeminiApiKey(e.target.value)}
+                    placeholder={useCommunityKey ? 'Using Kisan Dost shared key' : 'Enter AIzaSy... or paste your Gemini Key'}
+                    className={`w-full pl-3 pr-10 py-2 text-xs bg-slate-950 border rounded-xl focus:outline-hidden text-white font-mono placeholder:font-sans placeholder:text-slate-600 transition ${
+                      useCommunityKey
+                        ? 'border-slate-800 bg-slate-900/50 text-slate-500 cursor-not-allowed'
+                        : 'border-slate-700 focus:border-emerald-500'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    disabled={useCommunityKey}
+                    onClick={() => setShowGeminiKey(!showGeminiKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition disabled:opacity-30"
+                  >
+                    {showGeminiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+
+                {/* Fallback Checkbox */}
+                <label className="flex items-center space-x-2 text-[11px] text-slate-400 cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={useCommunityKey}
+                    onChange={(e) => setUseCommunityKey(e.target.checked)}
+                    className="rounded-sm border-slate-700 text-emerald-600 focus:ring-0 focus:ring-offset-0 bg-slate-900"
+                  />
+                  <span>Continue with Kisan Dost shared server key for now</span>
+                </label>
+              </div>
+
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 flex items-center justify-center space-x-2 text-sm mt-2"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 group transition-all"
               >
-                <span>{isRegister ? 'Complete Farmer Registration' : 'Sign in to Farm OS'}</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>
+                  {isRegister ? 'Register & Connect to Farm OS' : 'Sign In to Farm OS'}
+                </span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </form>
 
-            {/* Quick 1-Click Demo Profiles (Essential for Judges & Demonstrations) */}
-            <div className="space-y-3 pt-3 border-t border-slate-800/80">
-              <span className="text-[11px] uppercase tracking-wider font-bold text-slate-500 block text-center">
-                Instant 1-Click Demo Profiles (فوری لاگ ان)
-              </span>
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('Chaudhry Tariq', 'Multan', 15, 'Wheat & Cotton')}
-                  className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 text-left transition-all group"
-                >
-                  <div className="flex items-center space-x-1.5 text-xs font-bold text-white group-hover:text-emerald-400">
-                    <span>👨‍🌾 Ch. Tariq</span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">15 Acres • Multan</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('Malik Aslam', 'Faisalabad', 5, 'Wheat & Rice')}
-                  className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 text-left transition-all group"
-                >
-                  <div className="flex items-center space-x-1.5 text-xs font-bold text-white group-hover:text-emerald-400">
-                    <span>👨‍🌾 Malik Aslam</span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">5 Acres • Faisalabad</span>
-                </button>
+            {/* Privacy / Security Guarantee */}
+            <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-800/80 text-center space-y-1">
+              <div className="flex items-center justify-center space-x-1 text-[11px] text-slate-400">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Zero Secret Leaks Redaction</span>
               </div>
-            </div>
-
-            {/* Bottom Return Link */}
-            <div className="text-center pt-2">
-              <Link
-                href="/"
-                className="text-xs text-slate-400 hover:text-emerald-400 transition inline-flex items-center space-x-1"
-              >
-                <span>← Return to Public Dashboard</span>
-              </Link>
+              <p className="text-[10px] text-slate-500">
+                Your personal Google Gemini API key is encrypted and stored locally in your browser session.
+              </p>
             </div>
           </div>
         </div>
