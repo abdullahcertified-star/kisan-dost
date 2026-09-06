@@ -423,11 +423,7 @@ function ProfitCalculatorContent() {
   }, [result]);
 
   return (
-    <SaaSLayout
-      title="Crop Profit & Budget Engine"
-      subtitle="Deterministic financial revenues, itemized costs, net returns, and break-even yields"
-      badge="Financial Engine"
-    >
+    <>
         {/* Hero Header */}
         <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-sky-950 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -939,20 +935,26 @@ function ProfitCalculatorContent() {
             )}
           </div>
         </div>
-      </SaaSLayout>
+      </>
   );
 }
 
 export default function ProfitPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[#f4f7f5] flex items-center justify-center">
-          <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      }
+    <SaaSLayout
+      title="Crop Profit & Budget Engine"
+      subtitle="Deterministic financial revenues, itemized costs, net returns, and break-even yields"
+      badge="Financial Engine"
     >
-      <ProfitCalculatorContent />
-    </Suspense>
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center py-24">
+            <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        }
+      >
+        <ProfitCalculatorContent />
+      </Suspense>
+    </SaaSLayout>
   );
 }
