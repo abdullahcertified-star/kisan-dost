@@ -16,10 +16,6 @@ import {
   Sparkles,
   ArrowRight,
   CheckCircle2,
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
   Bot,
   Wheat,
   Activity,
@@ -106,8 +102,6 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
   const [isRegister, setIsRegister] = useState(initialIsRegister);
   const [showPassword, setShowPassword] = useState(false);
   const [showGeminiKey, setShowGeminiKey] = useState(false);
-  const [videoPlaying, setVideoPlaying] = useState(true);
-  const [videoMuted, setVideoMuted] = useState(true);
   const [lang, setLang] = useState<'en' | 'ur'>('en');
 
   // Form Fields
@@ -178,25 +172,6 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       setGeminiApiKey(existingKey);
     }
   }, [router]);
-
-  const toggleVideoPlayback = () => {
-    if (videoRef.current) {
-      if (videoPlaying) {
-        videoRef.current.pause();
-        setVideoPlaying(false);
-      } else {
-        videoRef.current.play();
-        setVideoPlaying(true);
-      }
-    }
-  };
-
-  const toggleVideoAudio = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !videoMuted;
-      setVideoMuted(!videoMuted);
-    }
-  };
 
   // Cinematic Post-Login Orchestration with Real Auth Token Generation
   const triggerCinematicLogin = (
@@ -483,7 +458,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
               ref={videoRef}
               autoPlay
               loop
-              muted={videoMuted}
+              muted
               playsInline
               poster="/images/auth-hero.jpg"
               className="w-full h-full object-cover scale-105 filter brightness-80 contrast-105"
@@ -517,25 +492,6 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                 </span>
               </div>
             </Link>
-
-            {/* Video Controls (Play/Pause & Mute) */}
-            <div className="flex items-center space-x-2 bg-slate-900/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/60 text-xs">
-              <button
-                onClick={toggleVideoPlayback}
-                className="text-slate-300 hover:text-white transition p-1"
-                title={videoPlaying ? 'Pause video' : 'Play video'}
-              >
-                {videoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              </button>
-              <span className="w-px h-3 bg-slate-700" />
-              <button
-                onClick={toggleVideoAudio}
-                className="text-slate-300 hover:text-white transition p-1"
-                title={videoMuted ? 'Unmute video audio' : 'Mute video audio'}
-              >
-                {videoMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
-              </button>
-            </div>
           </div>
 
           {/* Bottom Telemetry HUD Overlay */}
@@ -611,17 +567,6 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                 </div>
               </div>
 
-              {/* Direct Access Launch Button */}
-              <Link
-                href="/"
-                className="w-full flex items-center justify-between py-2.5 px-3.5 rounded-2xl bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 font-semibold text-xs transition group shadow-xs"
-              >
-                <span className="flex items-center space-x-2">
-                  <span>🌾</span>
-                  <span>Enter Farm OS Dashboard Directly (ڈیش بورڈ)</span>
-                </span>
-                <span className="text-[11px] text-emerald-400 group-hover:translate-x-1 transition-transform">Launch →</span>
-              </Link>
 
               {/* Logged Out Notice */}
               {isLoggedOut && (

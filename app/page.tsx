@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { loadSavedItem } from '@/lib/storage';
+import { loadSavedItem, clearAuthSession, isAuthenticated } from '@/lib/storage';
 import { API_BASE_URL } from '@/lib/api';
 import FloatingBot from '@/components/FloatingBot';
 import {
@@ -64,14 +64,8 @@ export default function AgriculturalSaaSDashboard() {
   const [farmZone, setFarmZone] = useState('Faisalabad Agro Zone (5 Acres)');
 
   const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('kisan_auth_token');
-      localStorage.removeItem('kisan_farmer_profile');
-      localStorage.removeItem('kd_dashboard_profile');
-      localStorage.removeItem('kd_custom_gemini_key');
-      document.cookie = 'kisan_auth_token=; path=/; max-age=0; SameSite=Lax';
-      window.location.replace('/login?logged_out=1');
-    }
+    clearAuthSession();
+    window.location.replace('/login?logged_out=1');
   };
 
   const [acres, setAcres] = useState(15);
@@ -86,8 +80,22 @@ export default function AgriculturalSaaSDashboard() {
     percentage: 78,
   });
 
-  // Load saved profile if available
+  // Load saved profile if available, require login if not authenticated
   useEffect(() => {
+    // If logged out, require login to get access, otherwise no access
+    if (!isAuthenticated()) {
+      window.location.replace('/login');
+      return;
+    }
+
+    // BFCache / History navigation guard: When clicking browser forward/back buttons
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (!isAuthenticated()) {
+        window.location.replace('/login');
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+
     const profile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
     if (profile) {
       if (profile.name) setFarmerName(profile.name);
@@ -96,6 +104,8 @@ export default function AgriculturalSaaSDashboard() {
       if (profile.role) setFarmerRole(profile.role);
       if (profile.district) setFarmZone(`${profile.district} Agro Zone`);
     }
+
+    return () => window.removeEventListener('pageshow', handlePageShow);
   }, []);
 
   // Fetch live weather data

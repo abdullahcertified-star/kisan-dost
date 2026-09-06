@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { loadSavedItem } from '@/lib/storage';
+import { loadSavedItem, clearAuthSession, isAuthenticated } from '@/lib/storage';
 import FloatingBot from '@/components/FloatingBot';
 import {
   LayoutDashboard,
@@ -56,17 +56,25 @@ export default function SaaSLayout({
   const [lang, setLang] = useState<'en' | 'ur'>('en');
 
   const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('kisan_auth_token');
-      localStorage.removeItem('kisan_farmer_profile');
-      localStorage.removeItem('kd_dashboard_profile');
-      localStorage.removeItem('kd_custom_gemini_key');
-      document.cookie = 'kisan_auth_token=; path=/; max-age=0; SameSite=Lax';
-      window.location.replace('/login?logged_out=1');
-    }
+    clearAuthSession();
+    window.location.replace('/login?logged_out=1');
   };
 
   useEffect(() => {
+    // If logged out, require login to get access, otherwise no access
+    if (!isAuthenticated()) {
+      window.location.replace('/login');
+      return;
+    }
+
+    // Guard against browser -> (Forward) or <- (Back) button restoring page after logout
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (!isAuthenticated()) {
+        window.location.replace('/login');
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+
     const profile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
     if (profile) {
       if (profile.name) setFarmerName(profile.name);
@@ -78,6 +86,8 @@ export default function SaaSLayout({
     if (savedLang) {
       setLang(savedLang);
     }
+
+    return () => window.removeEventListener('pageshow', handlePageShow);
   }, []);
 
   const toggleLanguage = (newLang: 'en' | 'ur') => {
