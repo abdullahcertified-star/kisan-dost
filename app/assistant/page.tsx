@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import SaaSLayout from '@/components/SaaSLayout';
-import { loadSavedItem, saveItem } from '@/lib/storage';
+import { loadSavedItem, saveItem, isAuthenticated } from '@/lib/storage';
 import { API_BASE_URL } from '@/lib/api';
 import {
   Bot,
@@ -141,8 +141,18 @@ export default function AssistantPage() {
       setMessages(savedHistory);
     }
 
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted || !isAuthenticated()) {
+        if (!isAuthenticated()) {
+          window.location.replace('/login');
+        }
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+
     return () => {
       window.removeEventListener('kd_language_change', onLangChange);
+      window.removeEventListener('pageshow', handlePageShow);
     };
   }, []);
 
@@ -447,43 +457,11 @@ export default function AssistantPage() {
 
   return (
     <SaaSLayout
-      title={lang === 'ur' ? 'کسان دوست اے آئی ماہر زراعت' : 'AI Agronomist Chat'}
-      subtitle={
-        lang === 'ur'
-          ? 'گوگل جیمنائی سے لیس کسان دوست زرعی چیٹ باٹ (جوابات: اردو)'
-          : 'Real-time multi-agent agricultural assistant powered by Google Gemini'
-      }
-      badge={lang === 'ur' ? 'اردو موڈ فعال ہے' : 'Gemini Flash Multi-Agent'}
+      title="AI Agronomist Chat"
+      subtitle="Real-time multi-agent agricultural assistant powered by Google Gemini"
+      badge={lang === 'ur' ? 'Reply Mode: اردو' : 'Reply Mode: English'}
       actions={
         <div className="flex items-center space-x-2">
-          {/* Agent Reply Language Toggle Button (EN / اردو) */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/90 text-xs shadow-2xs">
-            <button
-              type="button"
-              onClick={() => toggleAssistantLanguage('en')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                lang === 'en'
-                  ? 'bg-white text-emerald-700 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-              title="Reply in English"
-            >
-              EN
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleAssistantLanguage('ur')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                lang === 'ur'
-                  ? 'bg-emerald-600 text-white shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-              title="اردو میں جواب دیں"
-            >
-              اردو
-            </button>
-          </div>
-
           {/* Google AI Studio Key Button */}
           <button
             onClick={() => setShowKeyModal(true)}

@@ -86,7 +86,7 @@ export default function WeatherPage() {
               <span>← Back to Agronomy Dashboard</span>
             </Link>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center space-x-2">
-              <span>🌦️ Agro-Weather & 7-Day Forecast</span>
+              <span>🌦️ Agro-Weather & 5-Day Forecast</span>
               <span className="text-sm font-normal text-slate-500 hidden sm:inline">(موسمی پیشگوئی)</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-600">
@@ -317,25 +317,25 @@ export default function WeatherPage() {
               </div>
             )}
 
-            {/* 7-Day Forecast Grid */}
+            {/* 5-Day Forecast Grid */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
                 <div>
                   <h3 className="text-base font-extrabold text-slate-900 flex items-center space-x-2">
                     <span>📅</span>
-                    <span>7-Day Agricultural Forecast (آئندہ 7 دن کا تخمینہ)</span>
+                    <span>5-Day Agricultural Forecast (آئندہ 5 دن کا تخمینہ)</span>
                   </h3>
                   <p className="text-xs text-slate-500">
                     24-hour daily outlook: Maximum day heat, night minimums, and total expected rainfall.
                   </p>
                 </div>
                 <span className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg font-medium self-start sm:self-auto">
-                  24h Day Outlook & Rain Sums
+                  5-Day Outlook &amp; Rain Sums
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
-                {weather.forecast.map((day, idx) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                {weather.forecast.slice(0, 5).map((day, idx) => (
                   <div
                     key={idx}
                     className={`rounded-xl p-3.5 border flex flex-col justify-between text-xs transition ${

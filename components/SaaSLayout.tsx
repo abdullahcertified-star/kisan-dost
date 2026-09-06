@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { loadSavedItem } from '@/lib/storage';
+import { loadSavedItem, clearAuthSession, isAuthenticated } from '@/lib/storage';
 import FloatingBot from '@/components/FloatingBot';
 import {
   LayoutDashboard,
@@ -22,6 +22,7 @@ import {
   Search,
   Bell,
   ChevronDown,
+  ChevronRight,
   Menu,
   X,
   ArrowRight,
@@ -56,21 +57,27 @@ export default function SaaSLayout({
   const [authChecked, setAuthChecked] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem('kisan_auth_token');
-    localStorage.removeItem('kisan_farmer_profile');
-    localStorage.removeItem('kd_dashboard_profile');
-    localStorage.removeItem('kd_custom_gemini_key');
-    document.cookie = 'kisan_auth_token=; path=/; max-age=0; SameSite=Lax';
-    router.push('/login');
+    clearAuthSession();
+    window.location.replace('/login');
   };
 
   useEffect(() => {
+    // BFCache / Back Button Protection: redirect to /login if user logged out and presses Back
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted || !isAuthenticated()) {
+        if (!isAuthenticated()) {
+          window.location.replace('/login');
+        }
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+
     const token = typeof window !== 'undefined' ? localStorage.getItem('kisan_auth_token') : null;
     const profile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
 
     // Route Authorization Guard
     if (!token && !profile) {
-      router.replace('/login?from=' + encodeURIComponent(pathname || '/'));
+      window.location.replace('/login?from=' + encodeURIComponent(pathname || '/'));
       return;
     }
     setAuthChecked(true);
@@ -84,16 +91,15 @@ export default function SaaSLayout({
     const savedLang = localStorage.getItem('kd_lang') as 'en' | 'ur' | null;
     if (savedLang) {
       setLang(savedLang);
-      document.documentElement.setAttribute('dir', savedLang === 'ur' ? 'rtl' : 'ltr');
-      document.documentElement.setAttribute('lang', savedLang);
     }
+
+    return () => window.removeEventListener('pageshow', handlePageShow);
   }, [pathname, router]);
 
   const toggleLanguage = (newLang: 'en' | 'ur') => {
     setLang(newLang);
     localStorage.setItem('kd_lang', newLang);
-    document.documentElement.setAttribute('dir', newLang === 'ur' ? 'rtl' : 'ltr');
-    document.documentElement.setAttribute('lang', newLang);
+    // Dispatches language change event for bot responses WITHOUT altering the UI interface layout
     window.dispatchEvent(new CustomEvent('kd_language_change', { detail: newLang }));
   };
 
@@ -155,9 +161,9 @@ export default function SaaSLayout({
             </button>
           </div>
 
-          {/* User Profile Pill in Sidebar with Quick Logout */}
-          <div className="my-4 p-3 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-between">
-            <Link href="/profile" className="flex items-center space-x-3 min-w-0 flex-1 group">
+          {/* User Profile Pill in Sidebar (Navigates cleanly to /profile) */}
+          <div className="my-4 p-3 rounded-2xl bg-slate-50 border border-slate-200/60 hover:border-emerald-300 hover:bg-emerald-50/40 transition-all">
+            <Link href="/profile" className="flex items-center space-x-3 min-w-0 group" title="View Profile">
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:scale-105 transition-transform flex-shrink-0">
                 {farmerName.charAt(0)}
               </div>
@@ -165,14 +171,8 @@ export default function SaaSLayout({
                 <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-emerald-700 transition">{farmerName}</p>
                 <p className="text-xs text-slate-500 truncate">{farmerRole}</p>
               </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
             </Link>
-            <button
-              onClick={handleLogout}
-              title="Logout / Sign Out"
-              className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors ml-1"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
 
           {/* Navigation Links with Linear Icons */}

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { loadSavedItem, clearAuthSession } from '@/lib/storage';
+import { loadSavedItem, clearAuthSession, isAuthenticated } from '@/lib/storage';
 import { API_BASE_URL } from '@/lib/api';
 import FloatingBot from '@/components/FloatingBot';
 import {
@@ -21,6 +21,7 @@ import {
   Search,
   Bell,
   ChevronDown,
+  ChevronRight,
   Droplets,
   Calendar,
   CheckCircle2,
@@ -61,7 +62,7 @@ export default function AgriculturalSaaSDashboard() {
 
   const handleLogout = () => {
     clearAuthSession();
-    router.push('/login');
+    window.location.replace('/login');
   };
   const [acres, setAcres] = useState(15);
   const [activeFields, setActiveFields] = useState(12);
@@ -75,13 +76,22 @@ export default function AgriculturalSaaSDashboard() {
     percentage: 78,
   });
 
-  // Load saved profile if available and verify route auth
+  // Load saved profile if available, verify route auth, and prevent bfcache back button return
   useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted || !isAuthenticated()) {
+        if (!isAuthenticated()) {
+          window.location.replace('/login');
+        }
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+
     const token = typeof window !== 'undefined' ? localStorage.getItem('kisan_auth_token') : null;
     const profile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
 
     if (!token && !profile) {
-      router.replace('/login');
+      window.location.replace('/login');
       return;
     }
     if (profile) {
@@ -90,6 +100,8 @@ export default function AgriculturalSaaSDashboard() {
       if (profile.land_acres) setAcres(Number(profile.land_acres));
       if (profile.role) setFarmerRole(profile.role);
     }
+
+    return () => window.removeEventListener('pageshow', handlePageShow);
   }, []);
 
   // Fetch live weather data
@@ -222,9 +234,9 @@ export default function AgriculturalSaaSDashboard() {
             </button>
           </div>
 
-          {/* User Profile Pill in Sidebar with Quick Logout */}
-          <div className="my-5 p-3 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-between">
-            <Link href="/profile" className="flex items-center space-x-3 min-w-0 flex-1 group">
+          {/* User Profile Pill in Sidebar (Navigates cleanly to /profile) */}
+          <div className="my-5 p-3 rounded-2xl bg-slate-50 border border-slate-200/60 hover:border-emerald-300 hover:bg-emerald-50/40 transition-all">
+            <Link href="/profile" className="flex items-center space-x-3 min-w-0 group" title="View Profile">
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:scale-105 transition-transform flex-shrink-0">
                 {farmerName.charAt(0)}
               </div>
@@ -232,14 +244,8 @@ export default function AgriculturalSaaSDashboard() {
                 <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-emerald-700 transition">{farmerName}</p>
                 <p className="text-xs text-slate-500 truncate">{farmerRole}</p>
               </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
             </Link>
-            <button
-              onClick={handleLogout}
-              title="Logout / Sign Out"
-              className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors ml-1"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
 
           {/* Navigation Links with Linear Icons */}
