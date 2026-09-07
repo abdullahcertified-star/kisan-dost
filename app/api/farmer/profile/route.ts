@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import pool from '@/lib/db';
 import { getJwtSecret } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
@@ -27,19 +28,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Authentication required. Please log in.' }, { status: 401 });
   }
 
-  const userProfile = PROFILES[String(user.id)] || {
+  let dbFarmer: any = null;
+  try {
+    const res = await pool.query(
+      'SELECT id, phone, email, name, district, acres, crop FROM farmers WHERE id = $1 LIMIT 1',
+      [user.id]
+    );
+    if (res.rows.length > 0) {
+      dbFarmer = res.rows[0];
+    }
+  } catch (err) {
+    console.warn('Failed to read farmer from DB:', err);
+  }
+
+  const cached = PROFILES[String(user.id)] || {};
+  const userProfile = {
     id: user.id,
-    name: user.name || 'Farmer',
-    phone: user.phone || '',
+    name: dbFarmer?.name || cached.name || user.name || 'Farmer',
+    email: dbFarmer?.email || cached.email || user.email || '',
+    phone: dbFarmer?.phone || cached.phone || user.phone || '',
     role: user.role || 'Farmer',
-    district: 'Multan',
-    province: 'Punjab',
-    land_acres: 5,
-    soil_type: 'Loamy',
-    water_availability: 'Limited',
-    current_crop: 'Wheat',
-    preferred_language: 'ur',
-    created_at: new Date().toISOString(),
+    district: dbFarmer?.district || cached.district || 'Multan',
+    province: cached.province || 'Punjab',
+    land_acres: Number(dbFarmer?.acres || cached.land_acres || 5),
+    soil_type: cached.soil_type || 'Loam (Mera - زرخیز میرا)',
+    water_availability: cached.water_availability || 'Canal + Tubewell',
+    current_crop: dbFarmer?.crop || cached.current_crop || 'Wheat (گندم)',
+    preferred_language: cached.preferred_language || 'urdu',
+    created_at: cached.created_at || new Date().toISOString(),
   };
 
   return NextResponse.json(userProfile);
@@ -53,9 +69,33 @@ export async function POST(req: NextRequest) {
 
   try {
     const data = await req.json();
+
+    // Persist changes to Neon PostgreSQL database
+    try {
+      await pool.query(
+        `UPDATE farmers
+         SET name = COALESCE($1, name),
+             email = COALESCE($2, email),
+             district = COALESCE($3, district),
+             acres = COALESCE($4, acres),
+             crop = COALESCE($5, crop)
+         WHERE id = $6`,
+        [
+          data.name?.trim() || null,
+          data.email?.trim() || null,
+          data.district?.trim() || null,
+          data.land_acres ? Number(data.land_acres) : null,
+          data.current_crop || null,
+          user.id,
+        ]
+      );
+    } catch (dbErr) {
+      console.warn('Could not persist profile changes to Neon DB:', dbErr);
+    }
+
     const profile = {
       ...data,
-      id: user.id, // Strictly bind to authenticated user id
+      id: user.id,
       updated_at: new Date().toISOString(),
     };
     PROFILES[String(user.id)] = profile;

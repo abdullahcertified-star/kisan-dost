@@ -40,6 +40,8 @@ export interface ChatResponsePayload {
 export interface FarmerProfileData {
   id?: string;
   name: string;
+  email?: string;
+  phone?: string;
   district: string;
   province: string;
   land_acres: number;

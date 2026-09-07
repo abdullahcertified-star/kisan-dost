@@ -226,7 +226,8 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     finalCrop: string,
     finalApiKey: string,
     serverToken?: string,
-    finalPhone?: string
+    finalPhone?: string,
+    finalEmail?: string
   ) => {
     setActiveSession({
       name: finalName,
@@ -246,6 +247,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       current_crop: finalCrop,
       role: 'Farm Manager & Owner',
       phone: finalPhone || '',
+      email: finalEmail || (finalPhone?.includes('@') ? finalPhone : ''),
       gemini_api_key: (finalApiKey && finalApiKey.trim().length > 5) ? finalApiKey.trim() : '',
     };
     const token = serverToken || `kd_tok_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
@@ -360,7 +362,8 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
         data.user.crop,
         data.user.gemini_api_key || '',
         data.token,
-        loginPhoneOrEmail.trim()
+        data.user.phone || loginPhoneOrEmail.trim(),
+        data.user.email || (loginPhoneOrEmail.includes('@') ? loginPhoneOrEmail.trim() : '')
       );
     } catch (err: any) {
       setAuthError(
@@ -460,7 +463,8 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
         data.user.crop,
         registerGeminiApiKey.trim(),
         data.token,
-        registerPhoneOrEmail.trim()
+        data.user.phone || registerPhoneOrEmail.trim(),
+        data.user.email || (registerPhoneOrEmail.includes('@') ? registerPhoneOrEmail.trim() : '')
       );
     } catch (err: any) {
       setAuthError(

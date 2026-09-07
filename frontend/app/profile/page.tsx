@@ -10,7 +10,7 @@ import {
   FarmerProfileData,
 } from '@/lib/api';
 import { loadSavedItem } from '@/lib/storage';
-import { User, MapPin, Sprout, ShieldCheck, CheckCircle2, AlertCircle, Save } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Sprout, ShieldCheck, CheckCircle2, AlertCircle, Save } from 'lucide-react';
 
 const PROVINCES = [
   'Punjab',
@@ -70,6 +70,8 @@ const LAND_UNITS = [
 export default function ProfilePage() {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [name, setName] = useState('Abdullah');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [district, setDistrict] = useState('Faisalabad');
   const [province, setProvince] = useState('Punjab');
   const [landInput, setLandInput] = useState<number | string>(5.0);
@@ -89,11 +91,31 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Load existing profile from localStorage or backend on mount
+  // Load existing profile from /api/me or localStorage on mount
   useEffect(() => {
+    // 1. Fetch live authenticated user profile from Neon DB
+    fetch('/api/me', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.authenticated && data.user) {
+          if (data.user.name) setName(data.user.name);
+          if (data.user.email) setEmail(data.user.email);
+          if (data.user.phone) setPhone(data.user.phone);
+          if (data.user.district) setDistrict(data.user.district);
+          if (data.user.acres) setLandInput(data.user.acres);
+          if (data.user.crop) setCurrentCrop(data.user.crop);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load profile from /api/me:', err);
+      });
+
+    // 2. Fallback to client-side cached profile
     const localProfile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
     if (localProfile) {
       if (localProfile.name) setName(localProfile.name);
+      if (localProfile.email) setEmail(localProfile.email);
+      if (localProfile.phone) setPhone(localProfile.phone);
       if (localProfile.district) setDistrict(localProfile.district);
       if (localProfile.province) setProvince(localProfile.province);
       if (localProfile.land_acres) setLandInput(localProfile.land_acres);
@@ -144,6 +166,8 @@ export default function ProfilePage() {
 
     const payload: FarmerProfileData = {
       name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
       district: district.trim(),
       province,
       land_acres: finalAcres,
@@ -242,6 +266,39 @@ export default function ProfilePage() {
                     placeholder="e.g. Abdullah"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-hidden transition"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span>Email Address (ای میل ایڈریس)</span>
+                    <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded-sm">Account ID</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. farmer@gmail.com"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-hidden transition"
+                    />
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Phone Number (موبائل نمبر)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. 03001234567"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-hidden transition"
+                    />
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  </div>
                 </div>
 
                 <div>
@@ -461,11 +518,33 @@ export default function ProfilePage() {
               </span>
             </div>
 
-            {/* Farmer Name & Details */}
+            {/* Farmer Name, Email & Contact Identity */}
             <div className="mb-5">
-              <span className="text-[10px] text-emerald-400 uppercase tracking-wider block font-semibold">Farmer Name</span>
+              <span className="text-[10px] text-emerald-400 uppercase tracking-wider block font-semibold">Farmer Identity</span>
               <h3 className="text-xl font-bold text-white mt-0.5">{name || 'Kisan Bhai'}</h3>
-              <p className="text-xs text-slate-300 mt-0.5">{district}, {province}</p>
+              
+              {/* Farmer Email Badge */}
+              <div className="mt-2 space-y-1.5">
+                {email ? (
+                  <div className="flex items-center space-x-2 text-xs text-emerald-300 font-medium bg-emerald-950/70 border border-emerald-500/30 rounded-lg px-2.5 py-1 w-fit max-w-full">
+                    <Mail className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                    <span className="truncate">{email}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2 text-xs text-slate-400 bg-black/30 border border-white/5 rounded-lg px-2.5 py-1 w-fit">
+                    <Mail className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                    <span className="text-[11px]">No email registered (ای میل درج نہیں)</span>
+                  </div>
+                )}
+                {phone && (
+                  <div className="flex items-center space-x-2 text-xs text-slate-300 px-0.5">
+                    <Phone className="w-3 h-3 text-emerald-400/80 flex-shrink-0" />
+                    <span>{phone}</span>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-300 mt-2">{district}, {province}</p>
             </div>
 
             {/* Key Metrics Grid */}
