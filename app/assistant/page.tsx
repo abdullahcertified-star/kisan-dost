@@ -108,10 +108,11 @@ export default function AssistantPage() {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [inputKey, setInputKey] = useState('');
   const [keySavedToast, setKeySavedToast] = useState(false);
+  const [freeQueriesUsed, setFreeQueriesUsed] = useState<number>(0);
   const [lang, setLang] = useState<'en' | 'ur'>('en');
   const hasAutoSentParam = useRef(false);
 
-  // Initialize session, load chat history, custom Gemini Key, and language preference
+  // Initialize session, load chat history, custom Gemini Key, quota, and language preference
   useEffect(() => {
     const savedLang = (localStorage.getItem('kd_lang') as 'en' | 'ur') || 'en';
     setLang(savedLang);
@@ -126,6 +127,9 @@ export default function AssistantPage() {
     const savedKey = localStorage.getItem('kd_custom_gemini_key') || '';
     setCustomApiKey(savedKey);
     setInputKey(savedKey);
+
+    const used = Number(localStorage.getItem('kd_free_queries_used') || '0');
+    setFreeQueriesUsed(used);
 
     const savedSession = loadSavedItem<string>('kd_chat_session_id', '');
     if (savedSession) {
@@ -231,6 +235,35 @@ export default function AssistantPage() {
 
       const userGeminiKey = localStorage.getItem('kd_custom_gemini_key') || customApiKey || '';
       const currentLang = localStorage.getItem('kd_lang') || lang || 'en';
+
+      // Option 1 Quota Security Guard: 5 free trial queries on shared server key
+      const hasPersonalKey = Boolean(userGeminiKey && userGeminiKey.trim().length > 10);
+      if (!hasPersonalKey) {
+        const usedCount = Number(localStorage.getItem('kd_free_queries_used') || '0');
+        if (usedCount >= 5) {
+          setIsLoading(false);
+          const quotaWarningMessage: Message = {
+            id: 'msg_quota_' + Date.now(),
+            sender: 'agent',
+            text:
+              currentLang === 'ur'
+                ? `⚠️ **مفت ڈیمو کوٹہ مکمل (5/5 سوالات استعمال ہو چکے ہیں)**\n\nآپ نے کسان دوست شیئرڈ سرور کی پر 5 مفت ڈیمو سوالات کی حد مکمل کر لی ہے۔\n\nبغیر کسی رکاوٹ کے لامحدود چیٹ جاری رکھنے کے لیے برائے مہربانی اوپر **API Key** بٹن پر کلک کریں اور اپنی مفت **Google Gemini API Key** درج کریں۔ یہ گوگل اے آئی اسٹوڈیو (aistudio.google.com) پر بالکل مفت اور فوری دستیاب ہے!`
+                : `⚠️ **Free Trial Limit Reached (5/5 Demo Queries Used)**\n\nYou have used all 5 free trial questions on the Kisan Dost shared server key.\n\nTo continue unlimited agronomy and mandi conversations, please click the **API Key** button in the top bar to connect your own free **Google Gemini API Key** from [Google AI Studio](https://aistudio.google.com/app/apikey).`,
+            agentName: 'system',
+            specialistTitle: 'Quota Security Guard',
+            specialistIcon: '🔒',
+            modelUsed: 'Quota Guard',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          };
+          setMessages([...newMessages, quotaWarningMessage]);
+          setShowKeyModal(true);
+          return;
+        } else {
+          const newUsed = usedCount + 1;
+          localStorage.setItem('kd_free_queries_used', String(newUsed));
+          setFreeQueriesUsed(newUsed);
+        }
+      }
 
       const res = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
@@ -450,18 +483,36 @@ export default function AssistantPage() {
       badge={lang === 'ur' ? 'Reply Mode: اردو' : 'Reply Mode: English'}
       actions={
         <div className="flex items-center space-x-2">
-          {/* Google AI Studio Key Button */}
+          {/* Google AI Studio Key Button with Quota Counter */}
           <button
             onClick={() => setShowKeyModal(true)}
             title="Configure Google AI Studio Gemini API Key"
-            className="flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 transition"
+            className={`flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition ${
+              customApiKey
+                ? 'bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100'
+                : freeQueriesUsed >= 5
+                ? 'bg-rose-50 border border-rose-300 text-rose-700 animate-pulse hover:bg-rose-100'
+                : 'bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100'
+            }`}
           >
             <Key className="w-3.5 h-3.5 text-emerald-600" />
             <span className="hidden md:inline">
-              {customApiKey ? 'Google AI Studio: Connected' : 'Google AI Studio Key'}
+              {customApiKey
+                ? 'Personal Gemini Key (Unlimited)'
+                : `Free Trial: ${freeQueriesUsed}/5 Questions`}
             </span>
-            <span className="md:hidden">API Key</span>
-            {customApiKey && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
+            <span className="md:hidden">
+              {customApiKey ? 'Key: Active' : `${freeQueriesUsed}/5 Free`}
+            </span>
+            {customApiKey ? (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            ) : (
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  freeQueriesUsed >= 5 ? 'bg-rose-500 animate-ping' : 'bg-amber-500'
+                }`}
+              />
+            )}
           </button>
 
           <button
@@ -794,6 +845,30 @@ export default function AssistantPage() {
 
         {/* Bottom Floating Input Bar (ChatGPT / Gemini Style) */}
         <div className="pt-2 sticky bottom-0 bg-[#f4f6f8]/90 backdrop-blur-md">
+          {/* Shared Key Free Trial Banner */}
+          {!customApiKey && (
+            <div className="mb-2 px-3.5 py-1.5 rounded-xl bg-amber-50/95 border border-amber-200/80 text-amber-900 text-xs flex items-center justify-between shadow-2xs">
+              <div className="flex items-center space-x-2">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    freeQueriesUsed >= 5 ? 'bg-rose-500' : 'bg-amber-500'
+                  } animate-pulse`}
+                />
+                <span>
+                  {lang === 'ur'
+                    ? `شیئرڈ سرور کی (مفت ٹرائل: ${freeQueriesUsed}/5 سوالات استعمال ہوئے)`
+                    : `Shared Server Key (Free Trial: ${freeQueriesUsed}/5 queries used)`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowKeyModal(true)}
+                className="font-bold text-emerald-700 hover:text-emerald-800 underline ml-2 cursor-pointer"
+              >
+                {lang === 'ur' ? 'اپنی مفت کی شامل کریں (لامحدود)' : 'Add Your Free Key (Unlimited)'}
+              </button>
+            </div>
+          )}
           <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-md p-2 sm:p-2.5 flex items-end gap-2 focus-within:ring-2 focus-within:ring-emerald-500/30 focus-within:border-emerald-500 transition-all">
             {/* Microphone Button (Voice Speech-to-Text) */}
             <button

@@ -255,7 +255,26 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     }, 2500);
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Cryptographic SHA-256 Password Hashing Utility
+  const hashPassword = async (plainText: string): Promise<string> => {
+    if (!plainText) return '';
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(plainText + '_kisan_dost_salt_2026');
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+      let hash = 0;
+      for (let i = 0; i < plainText.length; i++) {
+        hash = (hash << 5) - hash + plainText.charCodeAt(i);
+        hash |= 0;
+      }
+      return 'h_' + Math.abs(hash).toString(16);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
 
@@ -274,8 +293,8 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     // Check if matching registered user or default admin credentials
     const matchedUser = registeredUsers.find(
       (u) =>
-        (u.phone?.toLowerCase() === inputClean || u.email?.toLowerCase() === inputClean) &&
-        u.password === password
+        (u.phone && u.phone.trim().toLowerCase() === inputClean) ||
+        (u.email && u.email.trim().toLowerCase() === inputClean)
     );
 
     const isDefaultAdmin =
@@ -285,10 +304,26 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     if (!matchedUser && !isDefaultAdmin) {
       setAuthError(
         lang === 'ur'
-          ? 'موبائل نمبر یا پاس ورڈ درست نہیں ہے۔ اگر آپ نئے کسان ہیں تو "نیا کسان رجسٹر" پر کلک کریں۔'
-          : 'Invalid credentials. If you are a new farmer, please switch to Register.'
+          ? 'اس موبائل نمبر یا ای میل پر کوئی کسان رجسٹرڈ نہیں ہے۔ برائے مہربانی پہلے نیا کسان رجسٹر کریں۔'
+          : 'No account found with this phone/email. Please register first.'
       );
       return;
+    }
+
+    if (matchedUser) {
+      const enteredHash = await hashPassword(password);
+      const isMatch =
+        (matchedUser.passwordHash && matchedUser.passwordHash === enteredHash) ||
+        (matchedUser.password && matchedUser.password === password);
+
+      if (!isMatch) {
+        setAuthError(
+          lang === 'ur'
+            ? 'درج کردہ پاس ورڈ درست نہیں ہے۔ برائے مہربانی دوبارہ کوشش کریں۔'
+            : 'Incorrect password. Please verify and try again.'
+        );
+        return;
+      }
     }
 
     // Validated login
@@ -301,7 +336,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     triggerCinematicLogin(targetName, targetDistrict, targetAcres, targetCrop, targetKey);
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
 
@@ -311,6 +346,24 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     }
     if (!phoneOrEmail.trim()) {
       setAuthError(lang === 'ur' ? 'موبائل نمبر یا ای میل درج کریں۔' : 'Please enter your phone number or email.');
+      return;
+    }
+
+    // Duplicate check: Check if phone or email is already registered
+    const registeredUsers = loadSavedItem<any[]>('kisan_registered_farmers', []);
+    const inputClean = phoneOrEmail.trim().toLowerCase();
+    const alreadyExists = registeredUsers.some(
+      (u) =>
+        (u.phone && u.phone.trim().toLowerCase() === inputClean) ||
+        (u.email && u.email.trim().toLowerCase() === inputClean)
+    );
+
+    if (alreadyExists) {
+      setAuthError(
+        lang === 'ur'
+          ? 'یہ موبائل نمبر یا ای میل پہلے سے رجسٹرڈ ہے۔ برائے مہربانی نیچے "لاگ اِن" کریں یا دوسرا نمبر استعمال کریں۔'
+          : 'This phone number or email is already registered. Please sign in instead.'
+      );
       return;
     }
 
@@ -341,9 +394,8 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       return;
     }
 
-    // Save to registered farmers list
-    const registeredUsers = loadSavedItem<any[]>('kisan_registered_farmers', []);
-    const existingIndex = registeredUsers.findIndex(u => u.phone === phoneOrEmail.trim() || u.email === phoneOrEmail.trim());
+    // Cryptographically hash password before saving (Never store plaintext password)
+    const passwordHash = await hashPassword(password);
 
     const newUser = {
       name: name.trim(),
@@ -352,16 +404,12 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       crop,
       phone: phoneOrEmail.trim(),
       email: phoneOrEmail.trim(),
-      password,
+      passwordHash,
       geminiApiKey: geminiApiKey.trim(),
       registeredAt: new Date().toISOString(),
     };
 
-    if (existingIndex >= 0) {
-      registeredUsers[existingIndex] = newUser;
-    } else {
-      registeredUsers.push(newUser);
-    }
+    registeredUsers.push(newUser);
     saveItem('kisan_registered_farmers', registeredUsers);
 
     triggerCinematicLogin(name.trim(), district, Number(acres) || 5, crop, geminiApiKey.trim());
@@ -870,7 +918,11 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                     onChange={(e) => setUseCommunityKey(e.target.checked)}
                     className="rounded-sm border-slate-700 text-emerald-600 focus:ring-0 focus:ring-offset-0 bg-slate-900"
                   />
-                  <span>Continue with Kisan Dost shared server key for now</span>
+                  <span>
+                    {lang === 'ur'
+                      ? 'شیئرڈ سرور کی استعمال کریں (مفت ٹرائل: 5 سوالات کی حد)'
+                      : 'Continue with Kisan Dost shared server key (Free trial: 5 queries limit)'}
+                  </span>
                 </label>
               </div>
 
@@ -884,6 +936,39 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                 </span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
+
+              {/* Mode Switcher / Already have an account link */}
+              <div className="pt-2 text-center text-xs">
+                {isRegister ? (
+                  <p className="text-slate-400">
+                    {lang === 'ur' ? 'پہلے سے اکاؤنٹ موجود ہے؟' : 'Already have an account?'}{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRegister(false);
+                        setAuthError('');
+                      }}
+                      className="text-emerald-400 hover:text-emerald-300 font-bold underline transition ml-1"
+                    >
+                      {lang === 'ur' ? 'لاگ اِن کریں (Sign In)' : 'Sign In'}
+                    </button>
+                  </p>
+                ) : (
+                  <p className="text-slate-400">
+                    {lang === 'ur' ? 'نیا اکاؤنٹ بنانا چاہتے ہیں؟' : "Don't have an account yet?"}{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRegister(true);
+                        setAuthError('');
+                      }}
+                      className="text-emerald-400 hover:text-emerald-300 font-bold underline transition ml-1"
+                    >
+                      {lang === 'ur' ? 'نیا کسان رجسٹر کریں (Register)' : 'Register here'}
+                    </button>
+                  </p>
+                )}
+              </div>
             </form>
 
             {/* Privacy / Security Guarantee */}
