@@ -136,16 +136,21 @@ export default function AssistantPage() {
     const used = Number(localStorage.getItem('kd_free_queries_used') || '0');
     setFreeQueriesUsed(used);
 
-    const savedSession = loadSavedItem<string>('kd_chat_session_id', '');
+    const p = profile;
+    const uid = p?.id ? String(p.id) : (p?.phone ? String(p.phone).replace(/\D/g, '') : 'guest');
+    const historyKey = `kd_chat_history_${uid}`;
+    const sessionKey = `kd_chat_session_${uid}`;
+
+    const savedSession = loadSavedItem<string>(sessionKey, '') || loadSavedItem<string>('kd_chat_session_id', '');
     if (savedSession) {
       setSessionId(savedSession);
     } else {
       const newId = 'session_' + Math.random().toString(36).substring(2, 9);
       setSessionId(newId);
-      saveItem('kd_chat_session_id', newId);
+      saveItem(sessionKey, newId);
     }
 
-    const savedHistory = loadSavedItem<Message[]>('kd_chat_history_v2', []);
+    const savedHistory = loadSavedItem<Message[]>(historyKey, []) || loadSavedItem<Message[]>('kd_chat_history_v2', []);
     if (savedHistory && savedHistory.length > 0) {
       setMessages(savedHistory);
     }
@@ -174,10 +179,21 @@ export default function AssistantPage() {
     }
   }, []);
 
+  // Helper to get active user-scoped storage key
+  const getUserChatKey = () => {
+    const p = loadSavedItem<any>('kisan_farmer_profile', null);
+    const uid = p?.id ? String(p.id) : (p?.phone ? String(p.phone).replace(/\D/g, '') : 'guest');
+    return {
+      historyKey: `kd_chat_history_${uid}`,
+      sessionKey: `kd_chat_session_${uid}`,
+    };
+  };
+
   // Save history on changes
   useEffect(() => {
     if (messages.length > 0) {
-      saveItem('kd_chat_history_v2', messages);
+      const { historyKey } = getUserChatKey();
+      saveItem(historyKey, messages);
     }
   }, [messages]);
 
@@ -202,8 +218,10 @@ export default function AssistantPage() {
     }
     const newId = 'session_' + Math.random().toString(36).substring(2, 9);
     setSessionId(newId);
-    saveItem('kd_chat_session_id', newId);
+    const { historyKey, sessionKey } = getUserChatKey();
+    saveItem(sessionKey, newId);
     setMessages([]);
+    saveItem(historyKey, []);
     saveItem('kd_chat_history_v2', []);
   };
 

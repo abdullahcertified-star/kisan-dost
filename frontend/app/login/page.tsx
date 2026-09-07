@@ -25,7 +25,8 @@ import {
   ExternalLink,
   AlertCircle,
   RefreshCw,
-  Check
+  Check,
+  X
 } from 'lucide-react';
 
 const PAKISTAN_DISTRICTS = [
@@ -378,12 +379,20 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
 
       const data = await res.json();
       if (!res.ok) {
-        setAuthError(
-          data.error ||
-            (lang === 'ur'
-              ? 'رجسٹریشن مکمل نہ ہو سکی۔ برائے مہربانی دوبارہ کوشش کریں۔'
-              : 'Registration failed. Please verify your details.')
-        );
+        let msg = data.error;
+        if (res.status === 409 || (data.error && (data.error.includes('already registered') || data.error.includes('already exists')))) {
+          msg = lang === 'ur'
+            ? 'یہ موبائل نمبر یا ای میل پہلے سے کسان دوست پر رجسٹرڈ ہے۔ برائے مہربانی اپنا پاس ورڈ درج کر کے لاگ اِن کریں۔'
+            : 'This phone number or email is already registered. Please sign in with your password.';
+        } else if (!msg) {
+          msg = lang === 'ur'
+            ? 'رجسٹریشن مکمل نہ ہو سکی۔ برائے مہربانی دوبارہ کوشش کریں۔'
+            : 'Registration failed. Please verify your details.';
+        }
+        setAuthError(msg);
+        setTimeout(() => {
+          document.getElementById('auth-error-banner')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 60);
         return;
       }
 
@@ -406,6 +415,9 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
           ? 'سرور سے رابطہ نہ ہو سکا۔ برائے مہربانی دوبارہ کوشش کریں۔'
           : 'Server connection error: ' + (err.message || 'Registration failed')
       );
+      setTimeout(() => {
+        document.getElementById('auth-error-banner')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 60);
     }
   };
 
@@ -651,11 +663,52 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
               </div>
             </div>
 
-            {/* Error Banner */}
+            {/* Perfectly Aligned, High-Contrast Error Alert Card */}
             {authError && (
-              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-start space-x-2.5 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span className="leading-relaxed">{authError}</span>
+              <div
+                id="auth-error-banner"
+                className="p-4 rounded-2xl bg-gradient-to-r from-rose-950/95 via-rose-900/90 to-rose-950/95 border-2 border-rose-500 text-white shadow-2xl shadow-rose-950/80 animate-in fade-in slide-in-from-top-2 duration-300"
+              >
+                <div className="flex items-start gap-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-rose-500/25 border border-rose-400/50 flex items-center justify-center shrink-0 mt-0.5 text-rose-300 shadow-xs">
+                    <AlertCircle className="w-5 h-5 text-rose-400" />
+                  </div>
+                  <div className="flex-1 space-y-1.5 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-300">
+                        {authError.toLowerCase().includes('already registered') || authError.includes('پہلے سے رجسٹرڈ')
+                          ? (lang === 'ur' ? '⚠️ اکاؤنٹ پہلے سے موجود ہے' : '⚠️ Account Already Exists')
+                          : (lang === 'ur' ? 'انتباہ / تصدیق کی خرابی' : 'Authentication Notice')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setAuthError('')}
+                        className="text-rose-400 hover:text-white p-1 rounded-md transition"
+                        title="Dismiss"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-xs font-semibold text-rose-100 leading-relaxed break-words">
+                      {authError}
+                    </p>
+                    {(authError.toLowerCase().includes('already registered') || authError.includes('پہلے سے رجسٹرڈ')) && (
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsRegister(false);
+                            setAuthError('');
+                          }}
+                          className="inline-flex items-center gap-1.5 bg-white text-rose-950 hover:bg-rose-100 font-black px-3.5 py-1.5 rounded-xl text-xs transition shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                          <span>{lang === 'ur' ? '👉 ابھی لاگ اِن کریں (Sign In)' : '👉 Click Here to Sign In'}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -919,6 +972,30 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                   </span>
                 </label>
               </div>
+
+              {/* Bottom Error Notification (Directly in view above submit button) */}
+              {authError && (
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-rose-950/95 via-rose-900 to-rose-950/95 border border-rose-500 text-white flex items-center justify-between gap-3 shadow-lg animate-in fade-in">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span className="text-xs font-bold text-rose-100 leading-tight">
+                      {authError}
+                    </span>
+                  </div>
+                  {(authError.toLowerCase().includes('already registered') || authError.includes('پہلے سے رجسٹرڈ')) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRegister(false);
+                        setAuthError('');
+                      }}
+                      className="shrink-0 bg-white text-rose-950 hover:bg-rose-100 font-black px-3 py-1.5 rounded-lg text-xs transition shadow-xs"
+                    >
+                      {lang === 'ur' ? 'لاگ اِن کریں' : 'Sign In'}
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Submit Button */}
               <button

@@ -63,10 +63,31 @@ export function setAuthSession(token: string, profile: any): void {
 export function clearAuthSession(): void {
   if (typeof window === 'undefined') return;
   try {
+    // 1. Purge all user chat histories and session IDs to prevent cross-account leaks on shared devices
+    const chatKeysToRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && (k.startsWith('kd_chat_history') || k.startsWith('kd_chat_session'))) {
+        chatKeysToRemove.push(k);
+      }
+    }
+    chatKeysToRemove.forEach((k) => {
+      window.localStorage.removeItem(k);
+      window.sessionStorage.removeItem(k);
+    });
+
+    window.localStorage.removeItem('kd_chat_history_v2');
+    window.localStorage.removeItem('kd_chat_session_id');
+    window.sessionStorage.removeItem('kd_chat_history_v2');
+    window.sessionStorage.removeItem('kd_chat_session_id');
+
+    // 2. Clear credentials and active profiles
     window.localStorage.removeItem('kisan_auth_token');
     window.localStorage.removeItem('kisan_farmer_profile');
     window.localStorage.removeItem('kd_dashboard_profile');
     window.localStorage.removeItem('kd_custom_gemini_key');
+    window.localStorage.removeItem('kd_free_queries_used');
+
     document.cookie = 'kisan_auth_token=; path=/; max-age=0; SameSite=Lax';
   } catch {}
 }
