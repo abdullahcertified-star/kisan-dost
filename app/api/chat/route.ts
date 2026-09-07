@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { decryptApiKey } from '@/lib/crypto';
+import { getJwtSecret, getGeminiServerKey } from '@/lib/env';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_kisan_dost_key_123!';
+const JWT_SECRET = getJwtSecret();
 
 const DISTRICT_COORDS: Record<string, { lat: number; lon: number; name: string }> = {
   multan: { lat: 30.1575, lon: 71.5249, name: 'Multan' },
@@ -78,15 +80,7 @@ Key Rules & Capabilities:
    - If asked for dangerous pesticide overdoses, warn against crop burn and environmental damage.`;
 
 function getGeminiKey(): string | null {
-  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
-  if (process.env.GOOGLE_API_KEY) return process.env.GOOGLE_API_KEY;
-  if (process.env.NEXT_PUBLIC_GEMINI_API_KEY) return process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-  try {
-    const b64 = 'QVEuQWI4Uk42SkJ0aVcyejhJQW44eTNwWW01eUtMLUlfZGhOVHI3RUFsLWhMemx5Z2dLS3c=';
-    return Buffer.from(b64, 'base64').toString('utf-8');
-  } catch {
-    return null;
-  }
+  return getGeminiServerKey();
 }
 
 async function executeGeminiRequest(apiKey: string, payload: any, models: string[]) {
@@ -184,6 +178,26 @@ Even if the user's prompt contains Urdu script or Roman Urdu, translate all agro
 }
 
 export async function POST(req: NextRequest) {
+  // Enforce sliding-window rate limiting: 30 requests/minute per client IP
+  const clientIp = getClientIp(req.headers);
+  const rateLimit = checkRateLimit(clientIp);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many requests. Please slow down and try again shortly.',
+        retryAfter: rateLimit.retryAfter,
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimit.retryAfter),
+          'X-RateLimit-Limit': '30',
+          'X-RateLimit-Remaining': '0',
+        },
+      }
+    );
+  }
+
   try {
     const body = await req.json();
     const message = (body.message || '').trim();

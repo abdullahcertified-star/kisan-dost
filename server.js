@@ -7,10 +7,11 @@ const jwt = require('jsonwebtoken');
 const pool = require('./db');
 const { encryptApiKey, decryptApiKey, maskApiKey, hashApiKey } = require('./lib/crypto');
 require('dotenv').config();
+const { getJwtSecret } = require('./lib/env');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_kisan_dost_key_123!';
+const JWT_SECRET = getJwtSecret();
 
 // Middleware
 app.use(cors({

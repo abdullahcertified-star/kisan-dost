@@ -3,8 +3,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { maskApiKey, hashApiKey } from '@/lib/crypto';
+import { getJwtSecret } from '@/lib/env';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_kisan_dost_key_123!';
+const JWT_SECRET = getJwtSecret();
 
 export async function POST(req: NextRequest) {
   try {

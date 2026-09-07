@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { getEncryptionSecret } from './env';
 
 /**
  * Robust Cryptographic Suite for Kisan Dost:
@@ -8,10 +9,7 @@ import crypto from 'crypto';
  * - Raw API keys are NEVER exposed in plain text in Neon PostgreSQL or API responses.
  */
 
-const ENCRYPTION_SECRET =
-  process.env.ENCRYPTION_KEY ||
-  process.env.JWT_SECRET ||
-  'kisan_dost_master_encryption_secret_key_2026_super_secure!';
+const ENCRYPTION_SECRET = getEncryptionSecret();
 
 // Derive a cryptographically sound 256-bit (32-byte) key using SHA-256
 const MASTER_KEY = crypto.createHash('sha256').update(ENCRYPTION_SECRET).digest();
