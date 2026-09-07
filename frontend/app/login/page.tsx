@@ -101,19 +101,24 @@ export function calculatePasswordStrength(pass: string) {
 export default function LoginPage({ initialIsRegister = false }: { initialIsRegister?: boolean }) {
   const router = useRouter();
   const [isRegister, setIsRegister] = useState(initialIsRegister);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [lang, setLang] = useState<'en' | 'ur'>('en');
 
-  // Form Fields
-  const [phoneOrEmail, setPhoneOrEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [district, setDistrict] = useState('Faisalabad');
-  const [acres, setAcres] = useState<number | string>(5);
-  const [crop, setCrop] = useState('Wheat (گندم)');
-  const [geminiApiKey, setGeminiApiKey] = useState('');
-  const [useCommunityKey, setUseCommunityKey] = useState(false);
+  // Isolated Login Form States
+  const [loginPhoneOrEmail, setLoginPhoneOrEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+
+  // Isolated Registration Form States
+  const [registerName, setRegisterName] = useState('');
+  const [registerPhoneOrEmail, setRegisterPhoneOrEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [registerDistrict, setRegisterDistrict] = useState('Faisalabad');
+  const [registerAcres, setRegisterAcres] = useState<number | string>(5);
+  const [registerCrop, setRegisterCrop] = useState('Wheat (گندم)');
+  const [registerGeminiApiKey, setRegisterGeminiApiKey] = useState('');
+  const [registerUseCommunityKey, setRegisterUseCommunityKey] = useState(false);
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
 
   // Status & Feedback
   const [authError, setAuthError] = useState('');
@@ -121,10 +126,49 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
   const [authStep, setAuthStep] = useState(0);
   const [authProgress, setAuthProgress] = useState(0);
   const [isLoggedOut, setIsLoggedOut] = useState(false);
+  const [activeSession, setActiveSession] = useState<{
+    name: string;
+    district: string;
+    acres: number | string;
+    hasCustomKey: boolean;
+  } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const pwdStrength = calculatePasswordStrength(password);
+  // Password Strength calculated exclusively on Registration Password
+  const pwdStrength = calculatePasswordStrength(registerPassword);
+
+  const resetLoginForm = () => {
+    setLoginPhoneOrEmail('');
+    setLoginPassword('');
+    setShowLoginPassword(false);
+  };
+
+  const resetRegisterForm = () => {
+    setRegisterName('');
+    setRegisterPhoneOrEmail('');
+    setRegisterPassword('');
+    setShowRegisterPassword(false);
+    setRegisterDistrict('Faisalabad');
+    setRegisterAcres(5);
+    setRegisterCrop('Wheat (گندم)');
+    setRegisterGeminiApiKey('');
+    setRegisterUseCommunityKey(false);
+  };
+
+  const switchToRegister = () => {
+    setIsRegister(true);
+    setAuthError('');
+    resetLoginForm();
+    resetRegisterForm();
+  };
+
+  const switchToLogin = () => {
+    setIsRegister(false);
+    setAuthError('');
+    resetRegisterForm();
+    resetLoginForm();
+  };
 
   const generateStrongPassword = () => {
     const uppers = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -140,8 +184,8 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     for (let i = 4; i < 12; i++) {
       pwd += allChars[Math.floor(Math.random() * allChars.length)];
     }
-    setPassword(pwd);
-    setShowPassword(true);
+    setRegisterPassword(pwd);
+    setShowRegisterPassword(true);
   };
 
   useEffect(() => {
@@ -167,10 +211,10 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       return;
     }
 
-    // If an existing custom key exists in localStorage, pre-fill it
+    // If an existing custom key exists in localStorage, pre-fill it for registration
     const existingKey = localStorage.getItem('kd_custom_gemini_key');
     if (existingKey) {
-      setGeminiApiKey(existingKey);
+      setRegisterGeminiApiKey(existingKey);
     }
   }, [router]);
 
@@ -181,8 +225,15 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     finalAcres: number | string,
     finalCrop: string,
     finalApiKey: string,
-    serverToken?: string
+    serverToken?: string,
+    finalPhone?: string
   ) => {
+    setActiveSession({
+      name: finalName,
+      district: finalDist,
+      acres: finalAcres,
+      hasCustomKey: Boolean(finalApiKey && finalApiKey.trim().length > 5),
+    });
     setIsAuthenticating(true);
     setAuthStep(1);
     setAuthProgress(20);
@@ -194,7 +245,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       land_acres: Number(finalAcres) || 5,
       current_crop: finalCrop,
       role: 'Farm Manager & Owner',
-      phone: phoneOrEmail,
+      phone: finalPhone || '',
       gemini_api_key: (finalApiKey && finalApiKey.trim().length > 5) ? finalApiKey.trim() : '',
     };
     const token = serverToken || `kd_tok_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
@@ -264,11 +315,11 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     e.preventDefault();
     setAuthError('');
 
-    if (!phoneOrEmail.trim()) {
+    if (!loginPhoneOrEmail.trim()) {
       setAuthError(lang === 'ur' ? 'برائے مہربانی موبائل نمبر یا ای میل درج کریں۔' : 'Please enter your phone number or email.');
       return;
     }
-    if (!password.trim()) {
+    if (!loginPassword.trim()) {
       setAuthError(lang === 'ur' ? 'پاس ورڈ درج کریں۔' : 'Please enter your password.');
       return;
     }
@@ -280,8 +331,8 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phoneOrEmail: phoneOrEmail.trim(),
-          password,
+          phoneOrEmail: loginPhoneOrEmail.trim(),
+          password: loginPassword,
         }),
       });
 
@@ -307,8 +358,9 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
         data.user.district,
         data.user.acres,
         data.user.crop,
-        data.user.gemini_api_key || geminiApiKey || '',
-        data.token
+        data.user.gemini_api_key || '',
+        data.token,
+        loginPhoneOrEmail.trim()
       );
     } catch (err: any) {
       setAuthError(
@@ -323,11 +375,11 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     e.preventDefault();
     setAuthError('');
 
-    if (!name.trim()) {
+    if (!registerName.trim()) {
       setAuthError(lang === 'ur' ? 'برائے مہربانی اپنا نام درج کریں۔' : 'Please enter your full name.');
       return;
     }
-    if (!phoneOrEmail.trim()) {
+    if (!registerPhoneOrEmail.trim()) {
       setAuthError(lang === 'ur' ? 'موبائل نمبر یا ای میل درج کریں۔' : 'Please enter your phone number or email.');
       return;
     }
@@ -350,7 +402,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     }
 
     // Check Gemini API Key
-    if (!useCommunityKey && (!geminiApiKey || geminiApiKey.trim().length < 8)) {
+    if (!registerUseCommunityKey && (!registerGeminiApiKey || registerGeminiApiKey.trim().length < 8)) {
       setAuthError(
         lang === 'ur'
           ? 'برائے مہربانی گوگل اے آئی اسٹوڈیو سے حاصل کردہ جیمنائی API Key درج کریں، یا نیچے "کمیونٹی کی" کا آپشن منتخب کریں۔'
@@ -366,14 +418,14 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone: phoneOrEmail.trim(),
-          email: phoneOrEmail.includes('@') ? phoneOrEmail.trim() : null,
-          password,
-          name: name.trim(),
-          district,
-          acres: Number(acres) || 5,
-          crop,
-          geminiApiKey: geminiApiKey.trim(),
+          phone: registerPhoneOrEmail.trim(),
+          email: registerPhoneOrEmail.includes('@') ? registerPhoneOrEmail.trim() : null,
+          password: registerPassword,
+          name: registerName.trim(),
+          district: registerDistrict,
+          acres: Number(registerAcres) || 5,
+          crop: registerCrop,
+          geminiApiKey: registerGeminiApiKey.trim(),
         }),
       });
 
@@ -406,8 +458,9 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
         data.user.district,
         data.user.acres,
         data.user.crop,
-        geminiApiKey.trim(),
-        data.token
+        registerGeminiApiKey.trim(),
+        data.token,
+        registerPhoneOrEmail.trim()
       );
     } catch (err: any) {
       setAuthError(
@@ -441,7 +494,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                 {lang === 'ur' ? 'کسان دوست سسٹم کنیکٹ ہو رہا ہے...' : 'Calibrating Kisan Dost Farm OS'}
               </h3>
               <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider">
-                {name || 'Registered Farmer'} • {district} Agro Zone ({acres} Acres)
+                {activeSession?.name || (isRegister ? registerName : 'Registered Farmer')} • {activeSession?.district || (isRegister ? registerDistrict : 'Punjab')} Agro Zone ({activeSession?.acres || (isRegister ? registerAcres : 5)} Acres)
               </p>
             </div>
 
@@ -468,7 +521,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
               <div className={`flex items-center space-x-2.5 transition-colors ${authStep >= 2 ? 'text-emerald-300 font-semibold' : 'text-slate-600'}`}>
                 <CheckCircle2 className={`w-4 h-4 ${authStep >= 2 ? 'text-emerald-400' : 'text-slate-700'}`} />
                 <span>
-                  2. {geminiApiKey && !useCommunityKey ? 'Connecting Google AI Studio Gemini API Key' : 'Activating Shared Gemini Multi-Agent Routing'}
+                  2. {activeSession?.hasCustomKey ? 'Connecting Google AI Studio Gemini API Key' : 'Activating Shared Gemini Multi-Agent Routing'}
                 </span>
               </div>
               <div className={`flex items-center space-x-2.5 transition-colors ${authStep >= 3 ? 'text-emerald-300 font-semibold' : 'text-slate-600'}`}>
@@ -553,7 +606,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center space-x-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Radar: {district} Zone</span>
+                <span>Radar: {isRegister ? registerDistrict : 'Faisalabad'} Zone</span>
               </div>
               <div className="inline-flex items-center space-x-1.5 bg-slate-900/60 text-slate-300 border border-slate-700/60 px-3 py-1 rounded-full text-xs backdrop-blur-md">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -634,10 +687,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
               <div className="grid grid-cols-2 p-1 bg-slate-900/90 rounded-2xl border border-slate-800">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsRegister(false);
-                    setAuthError('');
-                  }}
+                  onClick={switchToLogin}
                   className={`py-2 text-xs font-bold rounded-xl transition-all ${
                     !isRegister
                       ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
@@ -648,10 +698,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsRegister(true);
-                    setAuthError('');
-                  }}
+                  onClick={switchToRegister}
                   className={`py-2 text-xs font-bold rounded-xl transition-all ${
                     isRegister
                       ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
@@ -696,10 +743,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                       <div className="pt-2">
                         <button
                           type="button"
-                          onClick={() => {
-                            setIsRegister(false);
-                            setAuthError('');
-                          }}
+                          onClick={switchToLogin}
                           className="inline-flex items-center gap-1.5 bg-white text-rose-950 hover:bg-rose-100 font-black px-3.5 py-1.5 rounded-xl text-xs transition shadow-md hover:scale-[1.02] active:scale-[0.98]"
                         >
                           <span>{lang === 'ur' ? '👉 ابھی لاگ اِن کریں (Sign In)' : '👉 Click Here to Sign In'}</span>
@@ -712,113 +756,116 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
               </div>
             )}
 
-            {/* Form */}
-            <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4">
-              {isRegister && (
-                <>
-                  {/* Farmer Full Name */}
+            {/* Completely Isolated Forms with Dedicated Top Padding & Field Margin Containers */}
+            {isRegister ? (
+              <form
+                key="register-form"
+                onSubmit={handleRegister}
+                autoComplete="off"
+                className="auth-form-container pt-6 sm:pt-8 space-y-0"
+              >
+                {/* 1. Farmer Full Name (كسان کا نام) */}
+                <div className="auth-field-group mb-5 space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Full Name (کسان کا نام) <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      value={registerName}
+                      onChange={(e) => setRegisterName(e.target.value)}
+                      placeholder="e.g. Muhammad Usman"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white placeholder:text-slate-600 transition"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. District & Land Holdings */}
+                <div className="auth-field-group mb-5 grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">
-                      Full Name (کسان کا نام) <span className="text-rose-400">*</span>
+                    <label className="block text-xs font-semibold text-slate-300">
+                      District (ضلع)
                     </label>
                     <div className="relative">
-                      <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input
-                        type="text"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Muhammad Usman"
-                        className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white placeholder:text-slate-600 transition"
-                      />
-                    </div>
-                  </div>
-
-                  {/* District & Acres */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-300">
-                        District (ضلع)
-                      </label>
-                      <div className="relative">
-                        <MapPin className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-                        <select
-                          value={district}
-                          onChange={(e) => setDistrict(e.target.value)}
-                          className="w-full pl-8 pr-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white appearance-none"
-                        >
-                          {PAKISTAN_DISTRICTS.map((dist) => (
-                            <option key={dist} value={dist}>
-                              {dist}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-300">
-                        Land Holdings (ایکڑ)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="5000"
-                        value={acres}
-                        onChange={(e) => setAcres(e.target.value)}
-                        className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Primary Crop */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">
-                      Primary Crop (اہم فصل)
-                    </label>
-                    <div className="relative">
-                      <Wheat className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                      <MapPin className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                       <select
-                        value={crop}
-                        onChange={(e) => setCrop(e.target.value)}
+                        value={registerDistrict}
+                        onChange={(e) => setRegisterDistrict(e.target.value)}
                         className="w-full pl-8 pr-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white appearance-none"
                       >
-                        {MAJOR_CROPS.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
+                        {PAKISTAN_DISTRICTS.map((dist) => (
+                          <option key={dist} value={dist}>
+                            {dist}
                           </option>
                         ))}
                       </select>
                     </div>
                   </div>
-                </>
-              )}
 
-              {/* Phone or Email */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">
-                  Mobile Number / Email (فون نمبر یا ای میل) <span className="text-rose-400">*</span>
-                </label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type="text"
-                    required
-                    value={phoneOrEmail}
-                    onChange={(e) => setPhoneOrEmail(e.target.value)}
-                    placeholder="e.g. 0300-1234567 or farmer@gmail.com"
-                    className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white placeholder:text-slate-600 transition"
-                  />
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      Land Holdings (ایکڑ)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="5000"
+                      value={registerAcres}
+                      onChange={(e) => setRegisterAcres(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Strong Password Section */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-300">
-                    Password (پاس ورڈ) <span className="text-rose-400">*</span>
+                {/* 3. Primary Crop */}
+                <div className="auth-field-group mb-5 space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Primary Crop (اہم فصل)
                   </label>
-                  {isRegister ? (
+                  <div className="relative">
+                    <Wheat className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                    <select
+                      value={registerCrop}
+                      onChange={(e) => setRegisterCrop(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white appearance-none"
+                    >
+                      {MAJOR_CROPS.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 4. Phone or Email */}
+                <div className="auth-field-group mb-5 space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Mobile Number / Email (فون نمبر یا ای میل) <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      value={registerPhoneOrEmail}
+                      onChange={(e) => setRegisterPhoneOrEmail(e.target.value)}
+                      placeholder="e.g. 0300-1234567 or farmer@gmail.com"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white placeholder:text-slate-600 transition"
+                    />
+                  </div>
+                </div>
+
+                {/* 5. Strong Password Section */}
+                <div className="auth-field-group mb-5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      Password (پاس ورڈ) <span className="text-rose-400">*</span>
+                    </label>
                     <button
                       type="button"
                       onClick={generateStrongPassword}
@@ -828,219 +875,286 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
                       <Sparkles className="w-3 h-3" />
                       <span>{lang === 'ur' ? 'مضبوط پاس ورڈ تجویز کریں' : 'Suggest Strong Password'}</span>
                     </button>
-                  ) : (
-                    <span className="text-[11px] text-emerald-400 cursor-pointer hover:underline">
-                      Forgot Password?
-                    </span>
-                  )}
-                </div>
-                <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={isRegister ? 'e.g. Kisan@2026!' : '••••••••'}
-                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white placeholder:text-slate-600 transition font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-
-                {/* Real Password Strength Meter & Interactive Live Checklist */}
-                {(isRegister || password.length > 0) && (
-                  <div className="mt-2.5 p-3 bg-slate-900/95 rounded-xl border border-slate-800/90 space-y-2.5 animate-in fade-in">
-                    {/* Strength Progress Header */}
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-400 font-medium">
-                        {lang === 'ur' ? 'پاس ورڈ کی طاقت:' : 'Password Strength:'}
-                      </span>
-                      <span className={`font-bold ${pwdStrength.textColor}`}>
-                        {lang === 'ur' ? pwdStrength.labelUrdu : pwdStrength.label}
-                      </span>
-                    </div>
-
-                    {/* Segmented Strength Bar */}
-                    <div className="grid grid-cols-4 gap-1.5 h-1.5 w-full">
-                      <div className={`h-full rounded-full transition-all duration-300 ${pwdStrength.score >= 1 ? pwdStrength.color : 'bg-slate-800'}`} />
-                      <div className={`h-full rounded-full transition-all duration-300 ${pwdStrength.score >= 2 ? pwdStrength.color : 'bg-slate-800'}`} />
-                      <div className={`h-full rounded-full transition-all duration-300 ${pwdStrength.score >= 3 ? pwdStrength.color : 'bg-slate-800'}`} />
-                      <div className={`h-full rounded-full transition-all duration-300 ${pwdStrength.score >= 4 ? pwdStrength.color : 'bg-slate-800'}`} />
-                    </div>
-
-                    {/* Real-time Requirement Checklist */}
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 pt-1 text-[11px]">
-                      <div className={`flex items-center space-x-1.5 transition-colors ${pwdStrength.hasMinLength ? 'text-emerald-400 font-medium' : 'text-slate-500'}`}>
-                        <CheckCircle2 className={`w-3.5 h-3.5 flex-shrink-0 ${pwdStrength.hasMinLength ? 'text-emerald-400' : 'text-slate-600'}`} />
-                        <span>8+ Characters</span>
-                      </div>
-                      <div className={`flex items-center space-x-1.5 transition-colors ${pwdStrength.hasUpper && pwdStrength.hasLower ? 'text-emerald-400 font-medium' : 'text-slate-500'}`}>
-                        <CheckCircle2 className={`w-3.5 h-3.5 flex-shrink-0 ${pwdStrength.hasUpper && pwdStrength.hasLower ? 'text-emerald-400' : 'text-slate-600'}`} />
-                        <span>Upper & Lower (Aa)</span>
-                      </div>
-                      <div className={`flex items-center space-x-1.5 transition-colors ${pwdStrength.hasNumber ? 'text-emerald-400 font-medium' : 'text-slate-500'}`}>
-                        <CheckCircle2 className={`w-3.5 h-3.5 flex-shrink-0 ${pwdStrength.hasNumber ? 'text-emerald-400' : 'text-slate-600'}`} />
-                        <span>Number (0-9)</span>
-                      </div>
-                      <div className={`flex items-center space-x-1.5 transition-colors ${pwdStrength.hasSpecial ? 'text-emerald-400 font-medium' : 'text-slate-500'}`}>
-                        <CheckCircle2 className={`w-3.5 h-3.5 flex-shrink-0 ${pwdStrength.hasSpecial ? 'text-emerald-400' : 'text-slate-600'}`} />
-                        <span>Symbol (!@#$)</span>
-                      </div>
-                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* GOOGLE AI STUDIO GEMINI API KEY STEP (Prompted on Register or Available on Login) */}
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-900/90 border border-emerald-500/30 space-y-3 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                      <Key className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white flex items-center space-x-1.5">
-                        <span>Google AI Studio Gemini API Key</span>
-                        <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full font-semibold">
-                          Required for AI Bot
-                        </span>
-                      </h4>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {lang === 'ur'
-                          ? 'جیمنائی API Key درج کریں تاکہ چیٹ باٹ آپ کی ذاتی کی سے براہِ راست جواب دے۔'
-                          : 'Enter your Gemini API key so our AI Agronomist answers directly from your quota.'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Direct link to Google AI Studio */}
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
-                >
-                  <span>Get your free Gemini API Key from Google AI Studio</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-
-                {/* API Key Input */}
-                <div className="relative">
-                  <input
-                    type={showGeminiKey ? 'text' : 'password'}
-                    value={geminiApiKey}
-                    disabled={useCommunityKey}
-                    onChange={(e) => setGeminiApiKey(e.target.value)}
-                    placeholder={useCommunityKey ? 'Using Kisan Dost shared key' : 'Enter AIzaSy... or paste your Gemini Key'}
-                    className={`w-full pl-3 pr-10 py-2 text-xs bg-slate-950 border rounded-xl focus:outline-hidden text-white font-mono placeholder:font-sans placeholder:text-slate-600 transition ${
-                      useCommunityKey
-                        ? 'border-slate-800 bg-slate-900/50 text-slate-500 cursor-not-allowed'
-                        : 'border-slate-700 focus:border-emerald-500'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    disabled={useCommunityKey}
-                    onClick={() => setShowGeminiKey(!showGeminiKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition disabled:opacity-30"
-                  >
-                    {showGeminiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-
-                {/* Fallback Checkbox */}
-                <label className="flex items-center space-x-2 text-[11px] text-slate-400 cursor-pointer pt-1">
-                  <input
-                    type="checkbox"
-                    checked={useCommunityKey}
-                    onChange={(e) => setUseCommunityKey(e.target.checked)}
-                    className="rounded-sm border-slate-700 text-emerald-600 focus:ring-0 focus:ring-offset-0 bg-slate-900"
-                  />
-                  <span>
-                    {lang === 'ur'
-                      ? 'شیئرڈ سرور کی استعمال کریں (مفت ٹرائل: 5 سوالات کی حد)'
-                      : 'Continue with Kisan Dost shared server key (Free trial: 5 queries limit)'}
-                  </span>
-                </label>
-              </div>
-
-              {/* Bottom Error Notification (Directly in view above submit button) */}
-              {authError && (
-                <div className="p-3.5 rounded-xl bg-gradient-to-r from-rose-950/95 via-rose-900 to-rose-950/95 border border-rose-500 text-white flex items-center justify-between gap-3 shadow-lg animate-in fade-in">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                    <span className="text-xs font-bold text-rose-100 leading-tight">
-                      {authError}
-                    </span>
-                  </div>
-                  {(authError.toLowerCase().includes('already registered') || authError.includes('پہلے سے رجسٹرڈ')) && (
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type={showRegisterPassword ? 'text' : 'password'}
+                      required
+                      autoComplete="new-password"
+                      value={registerPassword}
+                      onChange={(e) => setRegisterPassword(e.target.value)}
+                      placeholder="e.g. Kisan@2026!"
+                      className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white placeholder:text-slate-600 transition font-mono"
+                    />
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsRegister(false);
-                        setAuthError('');
-                      }}
-                      className="shrink-0 bg-white text-rose-950 hover:bg-rose-100 font-black px-3 py-1.5 rounded-lg text-xs transition shadow-xs"
+                      onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
                     >
-                      {lang === 'ur' ? 'لاگ اِن کریں' : 'Sign In'}
+                      {showRegisterPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
+                  </div>
+
+                  {/* Real Password Strength Meter & Interactive Live Checklist */}
+                  {registerPassword.length > 0 && (
+                    <div className="mt-2.5 p-3 bg-slate-900/95 rounded-xl border border-slate-800/90 space-y-2.5 animate-in fade-in">
+                      {/* Strength Progress Header */}
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400 font-medium">
+                          {lang === 'ur' ? 'پاس ورڈ کی طاقت:' : 'Password Strength:'}
+                        </span>
+                        <span className={`font-bold ${pwdStrength.textColor}`}>
+                          {lang === 'ur' ? pwdStrength.labelUrdu : pwdStrength.label}
+                        </span>
+                      </div>
+
+                      {/* Segmented Strength Bar */}
+                      <div className="grid grid-cols-4 gap-1.5 h-1.5 w-full">
+                        <div className={`h-full rounded-full transition-all duration-300 ${pwdStrength.score >= 1 ? pwdStrength.color : 'bg-slate-800'}`} />
+                        <div className={`h-full rounded-full transition-all duration-300 ${pwdStrength.score >= 2 ? pwdStrength.color : 'bg-slate-800'}`} />
+                        <div className={`h-full rounded-full transition-all duration-300 ${pwdStrength.score >= 3 ? pwdStrength.color : 'bg-slate-800'}`} />
+                        <div className={`h-full rounded-full transition-all duration-300 ${pwdStrength.score >= 4 ? pwdStrength.color : 'bg-slate-800'}`} />
+                      </div>
+
+                      {/* Real-time Requirement Checklist */}
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 pt-1 text-[11px]">
+                        <div className={`flex items-center space-x-1.5 transition-colors ${pwdStrength.hasMinLength ? 'text-emerald-400 font-medium' : 'text-slate-500'}`}>
+                          <CheckCircle2 className={`w-3.5 h-3.5 flex-shrink-0 ${pwdStrength.hasMinLength ? 'text-emerald-400' : 'text-slate-600'}`} />
+                          <span>8+ Characters</span>
+                        </div>
+                        <div className={`flex items-center space-x-1.5 transition-colors ${pwdStrength.hasUpper && pwdStrength.hasLower ? 'text-emerald-400 font-medium' : 'text-slate-500'}`}>
+                          <CheckCircle2 className={`w-3.5 h-3.5 flex-shrink-0 ${pwdStrength.hasUpper && pwdStrength.hasLower ? 'text-emerald-400' : 'text-slate-600'}`} />
+                          <span>Upper & Lower (Aa)</span>
+                        </div>
+                        <div className={`flex items-center space-x-1.5 transition-colors ${pwdStrength.hasNumber ? 'text-emerald-400 font-medium' : 'text-slate-500'}`}>
+                          <CheckCircle2 className={`w-3.5 h-3.5 flex-shrink-0 ${pwdStrength.hasNumber ? 'text-emerald-400' : 'text-slate-600'}`} />
+                          <span>Number (0-9)</span>
+                        </div>
+                        <div className={`flex items-center space-x-1.5 transition-colors ${pwdStrength.hasSpecial ? 'text-emerald-400 font-medium' : 'text-slate-500'}`}>
+                          <CheckCircle2 className={`w-3.5 h-3.5 flex-shrink-0 ${pwdStrength.hasSpecial ? 'text-emerald-400' : 'text-slate-600'}`} />
+                          <span>Symbol (!@#$)</span>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
-              )}
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 group transition-all"
-              >
-                <span>
-                  {isRegister ? 'Register & Connect to Farm OS' : 'Sign In to Farm OS'}
-                </span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
+                {/* 6. GOOGLE AI STUDIO GEMINI API KEY STEP */}
+                <div className="auth-field-group mb-5 p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-900/90 border border-emerald-500/30 space-y-3 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
-              {/* Mode Switcher / Already have an account link */}
-              <div className="pt-2 text-center text-xs">
-                {isRegister ? (
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                        <Key className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-white flex items-center space-x-1.5">
+                          <span>Google AI Studio Gemini API Key</span>
+                          <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full font-semibold">
+                            Required for AI Bot
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {lang === 'ur'
+                            ? 'جیمنائی API Key درج کریں تاکہ چیٹ باٹ آپ کی ذاتی کی سے براہِ راست جواب دے۔'
+                            : 'Enter your Gemini API key so our AI Agronomist answers directly from your quota.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+                  >
+                    <span>Get your free Gemini API Key from Google AI Studio</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+
+                  <div className="relative">
+                    <input
+                      type={showGeminiKey ? 'text' : 'password'}
+                      value={registerGeminiApiKey}
+                      disabled={registerUseCommunityKey}
+                      autoComplete="off"
+                      onChange={(e) => setRegisterGeminiApiKey(e.target.value)}
+                      placeholder={registerUseCommunityKey ? 'Using Kisan Dost shared key' : 'Enter AIzaSy... or paste your Gemini Key'}
+                      className={`w-full pl-3 pr-10 py-2 text-xs bg-slate-950 border rounded-xl focus:outline-hidden text-white font-mono placeholder:font-sans placeholder:text-slate-600 transition ${
+                        registerUseCommunityKey
+                          ? 'border-slate-800 bg-slate-900/50 text-slate-500 cursor-not-allowed'
+                          : 'border-slate-700 focus:border-emerald-500'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      disabled={registerUseCommunityKey}
+                      onClick={() => setShowGeminiKey(!showGeminiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition disabled:opacity-30"
+                    >
+                      {showGeminiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+
+                  <label className="flex items-center space-x-2 text-[11px] text-slate-400 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={registerUseCommunityKey}
+                      onChange={(e) => setRegisterUseCommunityKey(e.target.checked)}
+                      className="rounded-sm border-slate-700 text-emerald-600 focus:ring-0 focus:ring-offset-0 bg-slate-900"
+                    />
+                    <span>
+                      {lang === 'ur'
+                        ? 'شیئرڈ سرور کی استعمال کریں (مفت ٹرائل: 5 سوالات کی حد)'
+                        : 'Continue with Kisan Dost shared server key (Free trial: 5 queries limit)'}
+                    </span>
+                  </label>
+                </div>
+
+                {/* 7. Bottom Error Notification */}
+                {authError && (
+                  <div className="auth-field-group mb-5 p-3.5 rounded-xl bg-gradient-to-r from-rose-950/95 via-rose-900 to-rose-950/95 border border-rose-500 text-white flex items-center justify-between gap-3 shadow-lg animate-in fade-in">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span className="text-xs font-bold text-rose-100 leading-tight">
+                        {authError}
+                      </span>
+                    </div>
+                    {(authError.toLowerCase().includes('already registered') || authError.includes('پہلے سے رجسٹرڈ')) && (
+                      <button
+                        type="button"
+                        onClick={switchToLogin}
+                        className="shrink-0 bg-white text-rose-950 hover:bg-rose-100 font-black px-3 py-1.5 rounded-lg text-xs transition shadow-xs"
+                      >
+                        {lang === 'ur' ? 'لاگ اِن کریں' : 'Sign In'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* 8. Submit Button */}
+                <div className="auth-field-group mb-5">
+                  <button
+                    type="submit"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 group transition-all"
+                  >
+                    <span>Register & Connect to Farm OS</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+
+                {/* 9. Switch to Sign In Link */}
+                <div className="pt-2 text-center text-xs">
                   <p className="text-slate-400">
                     {lang === 'ur' ? 'پہلے سے اکاؤنٹ موجود ہے؟' : 'Already have an account?'}{' '}
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsRegister(false);
-                        setAuthError('');
-                      }}
+                      onClick={switchToLogin}
                       className="text-emerald-400 hover:text-emerald-300 font-bold underline transition ml-1"
                     >
                       {lang === 'ur' ? 'لاگ اِن کریں (Sign In)' : 'Sign In'}
                     </button>
                   </p>
-                ) : (
+                </div>
+              </form>
+            ) : (
+              <form
+                key="login-form"
+                onSubmit={handleLogin}
+                autoComplete="off"
+                className="auth-form-container pt-6 sm:pt-8 space-y-0"
+              >
+                {/* 1. Phone or Email */}
+                <div className="auth-field-group mb-5 space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Mobile Number / Email (فون نمبر یا ای میل) <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      value={loginPhoneOrEmail}
+                      onChange={(e) => setLoginPhoneOrEmail(e.target.value)}
+                      placeholder="e.g. 0300-1234567 or farmer@gmail.com"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white placeholder:text-slate-600 transition"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Password */}
+                <div className="auth-field-group mb-5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      Password (پاس ورڈ) <span className="text-rose-400">*</span>
+                    </label>
+                    <span className="text-[11px] text-emerald-400 cursor-pointer hover:underline">
+                      Forgot Password?
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type={showLoginPassword ? 'text' : 'password'}
+                      required
+                      autoComplete="current-password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-hidden text-white placeholder:text-slate-600 transition font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
+                    >
+                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Bottom Error Notification */}
+                {authError && (
+                  <div className="auth-field-group mb-5 p-3.5 rounded-xl bg-gradient-to-r from-rose-950/95 via-rose-900 to-rose-950/95 border border-rose-500 text-white flex items-center justify-between gap-3 shadow-lg animate-in fade-in">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span className="text-xs font-bold text-rose-100 leading-tight">
+                        {authError}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Submit Button */}
+                <div className="auth-field-group mb-5">
+                  <button
+                    type="submit"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 group transition-all"
+                  >
+                    <span>Sign In to Farm OS</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+
+                {/* 5. Switch to Register Link */}
+                <div className="pt-2 text-center text-xs">
                   <p className="text-slate-400">
                     {lang === 'ur' ? 'نیا اکاؤنٹ بنانا چاہتے ہیں؟' : "Don't have an account yet?"}{' '}
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsRegister(true);
-                        setAuthError('');
-                      }}
+                      onClick={switchToRegister}
                       className="text-emerald-400 hover:text-emerald-300 font-bold underline transition ml-1"
                     >
                       {lang === 'ur' ? 'نیا کسان رجسٹر کریں (Register)' : 'Register here'}
                     </button>
                   </p>
-                )}
-              </div>
-            </form>
+                </div>
+              </form>
+            )}
 
             {/* Privacy / Security Guarantee */}
             <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-800/80 text-center space-y-1">
