@@ -22,6 +22,8 @@ export function getDatabaseUrl(): string {
   const url =
     process.env.DATABASE_URL ||
     process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
     process.env.NEON_DATABASE_URL ||
     '';
 
@@ -50,12 +52,27 @@ export function getJwtSecret(): string {
     return secret.trim();
   }
 
+  // If DATABASE_URL is configured, derive a deterministic 256-bit secret from it
+  const dbUrl =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.NEON_DATABASE_URL;
+
+  if (dbUrl && dbUrl.trim().length > 0) {
+    return crypto
+      .createHmac('sha256', dbUrl.trim())
+      .update('kisan_dost_jwt_signing_key_2026')
+      .digest('hex');
+  }
+
   // During Next.js static build phase, provide build-safe placeholder
   if (isBuildTime()) {
     return 'build-phase-temporary-collection-token';
   }
 
-  // In production runtime, fail fast and safely
+  // In production runtime without database, fail safely
   if (process.env.NODE_ENV === 'production') {
     throw new Error('[Security Failure] Required environment variable JWT_SECRET is not configured in production runtime.');
   }
@@ -72,6 +89,20 @@ export function getEncryptionSecret(): string {
   const secret = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
   if (secret && secret.trim().length > 0) {
     return secret.trim();
+  }
+
+  const dbUrl =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.NEON_DATABASE_URL;
+
+  if (dbUrl && dbUrl.trim().length > 0) {
+    return crypto
+      .createHmac('sha256', dbUrl.trim())
+      .update('kisan_dost_aes_encryption_key_2026')
+      .digest('hex');
   }
 
   if (isBuildTime()) {

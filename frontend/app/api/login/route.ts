@@ -115,8 +115,24 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error: any) {
     console.error('[Login API Error]:', error);
+    const msg = String(error?.message || '');
+    const isConnRefused = error?.code === 'ECONNREFUSED' || msg.includes('ECONNREFUSED');
+    const isDbConfig = msg.includes('DATABASE_URL') || (!process.env.DATABASE_URL && !process.env.POSTGRES_URL);
+
+    if (isDbConfig) {
+      return NextResponse.json(
+        { error: 'Database configuration missing: DATABASE_URL is not set in Vercel environment variables.' },
+        { status: 503 }
+      );
+    }
+    if (isConnRefused) {
+      return NextResponse.json(
+        { error: 'Database connection refused: ensure your Neon DATABASE_URL includes ?sslmode=require.' },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
-      { error: 'An unexpected internal error occurred during login.' },
+      { error: `Login error: ${msg.slice(0, 120) || 'An unexpected internal error occurred during login.'}` },
       { status: 500 }
     );
   }

@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { getDatabaseUrl } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const dbConfigured = Boolean(
-    process.env.DATABASE_URL ||
-    process.env.POSTGRES_URL ||
-    process.env.NEON_DATABASE_URL
-  );
-  const jwtConfigured = Boolean(process.env.JWT_SECRET);
+  const dbUrl = getDatabaseUrl();
+  const dbConfigured = Boolean(dbUrl);
+  const jwtConfigured = Boolean(process.env.JWT_SECRET || dbUrl);
   const geminiConfigured = Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
 
   let dbConnected = false;
@@ -20,9 +18,9 @@ export async function GET() {
       const res = await pool.query('SELECT 1 as test');
       dbConnected = res.rows.length > 0;
     } catch (err: any) {
-      dbError = err?.message?.includes('ECONNREFUSED')
-        ? 'ECONNREFUSED (Unable to reach PostgreSQL server)'
-        : 'Connection check failed';
+      const rawMsg = String(err?.message || '');
+      // Sanitize any accidental password leaking from connection error
+      dbError = rawMsg.replace(/:\/\/[^:]+:[^@]+@/, '://***:***@');
     }
   }
 

@@ -134,22 +134,36 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error: any) {
     console.error('[Registration API Error]:', error);
-    const isConnRefused = error?.code === 'ECONNREFUSED' || error?.message?.includes('ECONNREFUSED');
-    const isDbConfig = error?.message?.includes('DATABASE_URL');
+    const msg = String(error?.message || '');
+    const isConnRefused = error?.code === 'ECONNREFUSED' || msg.includes('ECONNREFUSED');
+    const isDbConfig = msg.includes('DATABASE_URL') || (!process.env.DATABASE_URL && !process.env.POSTGRES_URL);
+
     if (isDbConfig) {
       return NextResponse.json(
-        { error: 'Database configuration missing: DATABASE_URL is not configured in environment variables.' },
+        { error: 'Database configuration missing: DATABASE_URL is not set in Vercel environment variables.' },
         { status: 503 }
       );
     }
     if (isConnRefused) {
       return NextResponse.json(
-        { error: 'Database connection refused. Please verify DATABASE_URL is configured with ?sslmode=require in Vercel settings.' },
+        { error: 'Database connection refused: ensure your Neon DATABASE_URL includes ?sslmode=require.' },
+        { status: 503 }
+      );
+    }
+    if (msg.toLowerCase().includes('ssl')) {
+      return NextResponse.json(
+        { error: 'Database SSL error: please ensure DATABASE_URL ends with ?sslmode=require in Vercel settings.' },
+        { status: 503 }
+      );
+    }
+    if (msg.includes('password authentication') || msg.includes('SASL')) {
+      return NextResponse.json(
+        { error: 'Database authentication failed: please check your Neon password in Vercel settings.' },
         { status: 503 }
       );
     }
     return NextResponse.json(
-      { error: 'Registration service temporarily unavailable. Please verify database settings.' },
+      { error: `Registration error: ${msg.slice(0, 120) || 'Database query failed.'}` },
       { status: 500 }
     );
   }
