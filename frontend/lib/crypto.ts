@@ -9,10 +9,10 @@ import { getEncryptionSecret } from './env';
  * - Raw API keys are NEVER exposed in plain text in Neon PostgreSQL or API responses.
  */
 
-const ENCRYPTION_SECRET = getEncryptionSecret();
-
-// Derive a cryptographically sound 256-bit (32-byte) key using SHA-256
-const MASTER_KEY = crypto.createHash('sha256').update(ENCRYPTION_SECRET).digest();
+function getMasterKey(): Buffer {
+  const secret = getEncryptionSecret();
+  return crypto.createHash('sha256').update(secret).digest();
+}
 
 /**
  * Encrypts a sensitive API key using AES-256-GCM authenticated encryption.
@@ -22,10 +22,11 @@ export function encryptApiKey(plainText: string): string {
   if (!plainText || typeof plainText !== 'string') return '';
   const trimmed = plainText.trim();
   if (!trimmed) return '';
+  // If already encrypted, avoid double-encrypting
   if (trimmed.startsWith('enc:v1:')) return trimmed;
 
   const iv = crypto.randomBytes(12); // Standard 96-bit IV for GCM
-  const cipher = crypto.createCipheriv('aes-256-gcm', MASTER_KEY, iv);
+  const cipher = crypto.createCipheriv('aes-256-gcm', getMasterKey(), iv);
   let encrypted = cipher.update(trimmed, 'utf8', 'hex');
   encrypted += cipher.final('hex');
   const authTag = cipher.getAuthTag().toString('hex');
@@ -42,6 +43,7 @@ export function decryptApiKey(cipherText: string): string {
   const trimmed = cipherText.trim();
   if (!trimmed) return '';
 
+  // If not encrypted with our schema, return as-is (graceful fallback)
   if (!trimmed.startsWith('enc:v1:')) {
     return trimmed;
   }
@@ -53,7 +55,7 @@ export function decryptApiKey(cipherText: string): string {
 
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
-    const decipher = crypto.createDecipheriv('aes-256-gcm', MASTER_KEY, iv);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', getMasterKey(), iv);
     decipher.setAuthTag(authTag);
 
     let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
@@ -71,7 +73,7 @@ export function decryptApiKey(cipherText: string): string {
  */
 export function hashApiKey(plainText: string): string {
   if (!plainText || typeof plainText !== 'string') return '';
-  const plain = decryptApiKey(plainText.trim());
+  const plain = decryptApiKey(plainText.trim()); // in case an encrypted key was passed
   if (!plain) return '';
   return crypto.createHash('sha256').update(plain).digest('hex');
 }

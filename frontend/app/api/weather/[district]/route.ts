@@ -174,6 +174,7 @@ export async function GET(req: NextRequest, context: any) {
 
     return NextResponse.json(report);
   } catch (err: any) {
-    return NextResponse.json({ error: 'Failed to fetch weather', details: err.message }, { status: 500 });
+    console.error('Weather API error:', err);
+    return NextResponse.json({ error: 'Failed to fetch weather' }, { status: 500 });
   }
 }

@@ -4,12 +4,31 @@ import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { encryptApiKey, maskApiKey, hashApiKey } from '@/lib/crypto';
 import { getJwtSecret } from '@/lib/env';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
-const JWT_SECRET = getJwtSecret();
-
 export async function POST(req: NextRequest) {
+  // 1. Sliding-window rate limit: 3 registration requests/minute per IP
+  const clientIp = getClientIp(req.headers);
+  const rateLimit = checkRateLimit(`reg_${clientIp}`, 3, 60);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many registration requests. Please wait one minute before trying again.',
+        retryAfter: rateLimit.retryAfter,
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimit.retryAfter),
+          'X-RateLimit-Limit': '3',
+          'X-RateLimit-Remaining': '0',
+        },
+      }
+    );
+  }
+
   try {
     const body = await req.json();
     const { phone, email, password, name, district, acres, crop, geminiApiKey } = body;
@@ -21,8 +40,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cleanPhone = phone.trim();
-    const cleanEmail = email ? email.trim().toLowerCase() : cleanPhone;
+    if (typeof password !== 'string' || password.length < 8) {
+      return NextResponse.json(
+        { error: 'Password must be at least 8 characters long.' },
+        { status: 400 }
+      );
+    }
+
+    const cleanPhone = String(phone).trim();
+    const cleanEmail = email ? String(email).trim().toLowerCase() : cleanPhone;
 
     // Check if farmer already exists in Neon database
     const existingCheck = await pool.query(
@@ -37,11 +63,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Securely hash password using bcrypt
+    // Securely hash password using bcrypt (salt rounds = 10)
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const rawApiKey = geminiApiKey && geminiApiKey.trim().length > 5 ? geminiApiKey.trim() : null;
+    const rawApiKey = geminiApiKey && String(geminiApiKey).trim().length > 5 ? String(geminiApiKey).trim() : null;
     const encryptedKey = rawApiKey ? encryptApiKey(rawApiKey) : null;
 
     // Insert into Neon 'farmers' table
@@ -53,15 +79,16 @@ export async function POST(req: NextRequest) {
         cleanPhone,
         cleanEmail,
         passwordHash,
-        name.trim(),
-        district.trim(),
-        Number(acres) || 5,
+        String(name).trim(),
+        String(district).trim(),
+        Math.max(0.1, Math.min(10000, Number(acres) || 5)),
         crop || 'Wheat (گندم)',
         encryptedKey,
       ]
     );
 
     const newUser = insertResult.rows[0];
+    const JWT_SECRET = getJwtSecret();
 
     // Generate JWT token
     const token = jwt.sign(
@@ -106,9 +133,9 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error: any) {
-    console.error('Registration API error:', error);
+    console.error('[Registration API Error]:', error);
     return NextResponse.json(
-      { error: 'Internal server error: ' + (error?.message || 'Database error') },
+      { error: 'An unexpected internal error occurred during registration.' },
       { status: 500 }
     );
   }

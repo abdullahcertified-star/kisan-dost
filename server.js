@@ -1,4 +1,5 @@
-// server.js - Express Backend for Neon PostgreSQL Authentication
+// server.js - Hardened Express Backend for Neon PostgreSQL Authentication
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -6,19 +7,51 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('./db');
 const { encryptApiKey, decryptApiKey, maskApiKey, hashApiKey } = require('./lib/crypto');
-require('dotenv').config();
 const { getJwtSecret } = require('./lib/env');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = getJwtSecret();
 
-// Middleware
+// Simple in-memory rate limiter for Express auth routes
+const expressRateLimitMap = new Map();
+function checkExpressRateLimit(ip, maxRequests, windowMs) {
+  const now = Date.now();
+  let record = expressRateLimitMap.get(ip);
+  if (!record) {
+    record = [];
+    expressRateLimitMap.set(ip, record);
+  }
+  record = record.filter((ts) => now - ts < windowMs);
+  expressRateLimitMap.set(ip, record);
+  if (record.length >= maxRequests) {
+    return false;
+  }
+  record.push(now);
+  return true;
+}
+
+// Strictly configured CORS allowlist
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || true,
+  origin: (origin, callback) => {
+    // Allow non-browser agents or explicitly whitelisted web origins
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Cross-Origin Request Blocked by Kisan Dost CORS Policy.'));
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
 }));
-app.use(express.json());
+
+app.use(express.json({ limit: '50kb' }));
 app.use(cookieParser());
 
 // 1. Health Check
@@ -29,10 +62,19 @@ app.get('/health', (req, res) => {
 // 2. Registration Route (/api/register)
 app.post('/api/register', async (req, res) => {
   try {
+    const clientIp = req.ip || req.connection.remoteAddress || '127.0.0.1';
+    if (!checkExpressRateLimit(`reg_${clientIp}`, 5, 60000)) {
+      return res.status(429).json({ error: 'Too many registration requests. Please try again in one minute.' });
+    }
+
     const { phone, email, password, name, district, acres, crop, geminiApiKey } = req.body;
 
     if (!phone || !password || !name || !district) {
-      return res.status(400).json({ error: 'Missing required fields: phone, password, name, district are mandatory.' });
+      return res.status(400).json({ error: 'Missing required fields: phone, password, name, and district are mandatory.' });
+    }
+
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
     }
 
     const cleanPhone = phone.trim();
@@ -67,7 +109,7 @@ app.post('/api/register', async (req, res) => {
         passwordHash,
         name.trim(),
         district.trim(),
-        Number(acres) || 5,
+        Math.max(0.1, Math.min(10000, Number(acres) || 5)),
         crop || 'Wheat (گندم)',
         encryptedKey,
       ]
@@ -113,18 +155,23 @@ app.post('/api/register', async (req, res) => {
       user: safeUser,
     });
   } catch (error) {
-    console.error('Registration error:', error);
-    return res.status(500).json({ error: 'Internal server error during registration: ' + error.message });
+    console.error('[Registration Error]:', error);
+    return res.status(500).json({ error: 'An unexpected internal error occurred during registration.' });
   }
 });
 
 // 3. Login Route (/api/login)
 app.post('/api/login', async (req, res) => {
   try {
+    const clientIp = req.ip || req.connection.remoteAddress || '127.0.0.1';
+    if (!checkExpressRateLimit(`log_${clientIp}`, 10, 60000)) {
+      return res.status(429).json({ error: 'Too many login attempts. Please wait one minute before trying again.' });
+    }
+
     const { phoneOrEmail, password } = req.body;
 
     if (!phoneOrEmail || !password) {
-      return res.status(400).json({ error: 'Please provide phone/email and password.' });
+      return res.status(400).json({ error: 'Invalid phone/email or password.' });
     }
 
     const inputClean = phoneOrEmail.trim().toLowerCase();
@@ -139,7 +186,9 @@ app.post('/api/login', async (req, res) => {
     );
 
     if (userQuery.rows.length === 0) {
-      return res.status(401).json({ error: 'No account found with this phone number or email. Please register first.' });
+      // Perform constant-time dummy comparison to prevent timing enumeration
+      await bcrypt.compare(password, '$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345');
+      return res.status(401).json({ error: 'Invalid phone/email or password.' });
     }
 
     const farmer = userQuery.rows[0];
@@ -147,7 +196,7 @@ app.post('/api/login', async (req, res) => {
     // Verify password using bcrypt.compare
     const isPasswordValid = await bcrypt.compare(password, farmer.password_hash);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Incorrect password. Please verify and try again.' });
+      return res.status(401).json({ error: 'Invalid phone/email or password.' });
     }
 
     // Generate JWT token
@@ -189,15 +238,14 @@ app.post('/api/login', async (req, res) => {
       user: safeUser,
     });
   } catch (error) {
-    console.error('Login error:', error);
-    return res.status(500).json({ error: 'Internal server error during login: ' + error.message });
+    console.error('[Login Error]:', error);
+    return res.status(500).json({ error: 'An unexpected internal error occurred during login.' });
   }
 });
 
 // 4. Profile Verification Route (/api/me)
 app.get('/api/me', async (req, res) => {
   try {
-    // Read from HttpOnly cookie or Authorization header
     const token =
       req.cookies.kisan_auth_token ||
       (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
@@ -216,7 +264,7 @@ app.get('/api/me', async (req, res) => {
       return res.status(401).json({ authenticated: false, error: 'Invalid or expired token.' });
     }
 
-    // Query *only* that specific logged-in user from Neon database
+    // Query only that specific logged-in user from Neon database
     const userResult = await pool.query(
       `SELECT id, phone, email, name, district, acres, crop, gemini_api_key, registered_at
        FROM farmers
@@ -242,17 +290,21 @@ app.get('/api/me', async (req, res) => {
       user: safeUser,
     });
   } catch (error) {
-    console.error('Profile verification error:', error);
-    return res.status(500).json({ error: 'Failed to verify user profile: ' + error.message });
+    console.error('[Profile Verification Error]:', error);
+    return res.status(500).json({ error: 'Failed to verify user profile.' });
   }
 });
 
 // 5. Logout Route (/api/logout)
 app.post('/api/logout', async (req, res) => {
   try {
-    const token = req.cookies.kisan_auth_token;
+    const token =
+      req.cookies.kisan_auth_token ||
+      (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
+        ? req.headers.authorization.split(' ')[1]
+        : null);
+
     if (token) {
-      // Remove or invalidate active token in database
       await pool.query('DELETE FROM kisan_auth_tokens WHERE session_token = $1', [token]);
     }
 
@@ -266,8 +318,8 @@ app.post('/api/logout', async (req, res) => {
 
     return res.json({ success: true, message: 'Logged out successfully.' });
   } catch (error) {
-    console.error('Logout error:', error);
-    return res.status(500).json({ error: 'Logout failed: ' + error.message });
+    console.error('[Logout Error]:', error);
+    return res.status(500).json({ error: 'Logout failed.' });
   }
 });
 

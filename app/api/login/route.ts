@@ -2,27 +2,45 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
-
 import { maskApiKey, hashApiKey } from '@/lib/crypto';
 import { getJwtSecret } from '@/lib/env';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
-const JWT_SECRET = getJwtSecret();
-
 export async function POST(req: NextRequest) {
+  // 1. Sliding-window rate limit: 5 attempts/minute per IP
+  const clientIp = getClientIp(req.headers);
+  const rateLimit = checkRateLimit(`login_${clientIp}`, 5, 60);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too many login attempts. Please wait one minute before trying again.',
+        retryAfter: rateLimit.retryAfter,
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimit.retryAfter),
+          'X-RateLimit-Limit': '5',
+          'X-RateLimit-Remaining': '0',
+        },
+      }
+    );
+  }
+
   try {
     const body = await req.json();
     const { phoneOrEmail, password } = body;
 
     if (!phoneOrEmail || !password) {
       return NextResponse.json(
-        { error: 'Please enter your phone number or email, and password.' },
+        { error: 'Invalid phone/email or password.' },
         { status: 400 }
       );
     }
 
-    const inputClean = phoneOrEmail.trim().toLowerCase();
+    const inputClean = String(phoneOrEmail).trim().toLowerCase();
 
     // Query farmer from Neon PostgreSQL
     const userQuery = await pool.query(
@@ -33,9 +51,11 @@ export async function POST(req: NextRequest) {
       [inputClean]
     );
 
+    // Timing-resilient check preventing account enumeration
     if (userQuery.rows.length === 0) {
+      await bcrypt.compare(password, '$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345');
       return NextResponse.json(
-        { error: 'No account found with this phone number or email. Please register first.' },
+        { error: 'Invalid phone/email or password.' },
         { status: 401 }
       );
     }
@@ -46,10 +66,12 @@ export async function POST(req: NextRequest) {
     const isPasswordValid = await bcrypt.compare(password, farmer.password_hash);
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: 'Incorrect password. Please verify and try again.' },
+        { error: 'Invalid phone/email or password.' },
         { status: 401 }
       );
     }
+
+    const JWT_SECRET = getJwtSecret();
 
     // Generate JWT token
     const token = jwt.sign(
@@ -92,9 +114,9 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error: any) {
-    console.error('Login API error:', error);
+    console.error('[Login API Error]:', error);
     return NextResponse.json(
-      { error: 'Internal server error: ' + (error?.message || 'Login failure') },
+      { error: 'An unexpected internal error occurred during login.' },
       { status: 500 }
     );
   }

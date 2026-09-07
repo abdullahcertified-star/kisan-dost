@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 interface CropInfo {
   name_en: string;
@@ -95,6 +96,15 @@ const CROP_DATABASE: Record<string, CropInfo> = {
 };
 
 export async function POST(req: NextRequest) {
+  const clientIp = getClientIp(req.headers);
+  const rateLimit = checkRateLimit(`fert_${clientIp}`, 20, 60);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many calculation requests. Please wait a moment.' },
+      { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter) } }
+    );
+  }
+
   try {
     const body = await req.json();
     const cropInput = String(body.crop || 'Wheat').trim();
@@ -269,6 +279,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(plan);
   } catch (err: any) {
-    return NextResponse.json({ error: 'Failed to calculate fertilizer plan', details: err.message }, { status: 500 });
+    console.error('[Fertilizer Calculator Error]:', err);
+    return NextResponse.json({ error: 'Failed to calculate fertilizer plan.' }, { status: 500 });
   }
 }

@@ -1,7 +1,22 @@
+import crypto from 'crypto';
+
 /**
  * Centralized Environment Security Validator
- * Safely resolves database and encryption secrets without breaking build-time static page collection.
+ * Safely resolves database, JWT, and encryption secrets.
+ * Strictly forbids static/hardcoded secret fallbacks in production runtime.
  */
+
+let devEphemeralJwtSecret: string | null = null;
+let devEphemeralEncSecret: string | null = null;
+
+function isBuildTime(): boolean {
+  return (
+    process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.npm_lifecycle_event === 'build' ||
+    (typeof process.argv !== 'undefined' &&
+      process.argv.some((arg) => arg.includes('build') || arg.includes('next-build')))
+  );
+}
 
 export function getDatabaseUrl(): string {
   const url =
@@ -10,39 +25,72 @@ export function getDatabaseUrl(): string {
     process.env.NEON_DATABASE_URL ||
     '';
 
-  if (!url && typeof window === 'undefined' && process.env.NEXT_PHASE !== 'phase-production-build') {
-    console.warn('[Database Warning] DATABASE_URL is not set in environment variables. Database operations will require this variable.');
+  if (url && url.trim().length > 0) {
+    return url.trim();
   }
-  return url;
+
+  // During Next.js static collection/build phase, provide safe compilation placeholder
+  if (isBuildTime()) {
+    return 'postgresql://build-placeholder:placeholder@localhost/placeholder_db?sslmode=require';
+  }
+
+  if (typeof window === 'undefined') {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[Security Failure] Required environment variable DATABASE_URL is not configured in production runtime.');
+    }
+    console.warn('[Database Warning] DATABASE_URL is not set in environment variables.');
+  }
+
+  return '';
 }
 
 export function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    if (typeof window === 'undefined' && process.env.NEXT_PHASE !== 'phase-production-build') {
-      console.warn('[Security Warning] JWT_SECRET is not set in environment variables; using secure fallback key.');
-    }
-    return 'kisan_dost_secure_jwt_production_fallback_key_2026!';
+  if (secret && secret.trim().length > 0) {
+    return secret.trim();
   }
-  return secret;
+
+  // During Next.js static build phase, provide build-safe placeholder
+  if (isBuildTime()) {
+    return 'build-phase-temporary-collection-token';
+  }
+
+  // In production runtime, fail fast and safely
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('[Security Failure] Required environment variable JWT_SECRET is not configured in production runtime.');
+  }
+
+  // Development runtime: generate ephemeral, cryptographically random 256-bit token
+  if (!devEphemeralJwtSecret) {
+    devEphemeralJwtSecret = crypto.randomBytes(32).toString('hex');
+    console.warn('[Security Warning] JWT_SECRET is missing. An ephemeral dev-only secret was generated for this process.');
+  }
+  return devEphemeralJwtSecret;
 }
 
 export function getEncryptionSecret(): string {
   const secret = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
-  if (!secret) {
-    if (typeof window === 'undefined' && process.env.NEXT_PHASE !== 'phase-production-build') {
-      console.warn('[Security Warning] ENCRYPTION_KEY or JWT_SECRET is not set; using secure fallback key.');
-    }
-    return 'kisan_dost_master_encryption_secret_key_2026_super_secure!';
+  if (secret && secret.trim().length > 0) {
+    return secret.trim();
   }
-  return secret;
+
+  if (isBuildTime()) {
+    return 'build-phase-temporary-collection-token';
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('[Security Failure] Required environment variable ENCRYPTION_KEY is not configured in production runtime.');
+  }
+
+  if (!devEphemeralEncSecret) {
+    devEphemeralEncSecret = crypto.randomBytes(32).toString('hex');
+    console.warn('[Security Warning] ENCRYPTION_KEY is missing. An ephemeral dev-only secret was generated for this process.');
+  }
+  return devEphemeralEncSecret;
 }
 
 export function getGeminiServerKey(): string | null {
-  return (
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-    null
-  );
+  // Only read from server-side environment variables. Never read NEXT_PUBLIC_* variables.
+  const serverKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || null;
+  return serverKey ? serverKey.trim() : null;
 }

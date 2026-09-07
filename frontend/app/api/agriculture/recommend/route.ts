@@ -210,6 +210,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(cropPlan);
   } catch (err: any) {
-    return NextResponse.json({ error: 'Failed to generate recommendations', details: err.message }, { status: 500 });
+    console.error('Recommend API error:', err);
+    return NextResponse.json({ error: 'Failed to generate recommendations' }, { status: 500 });
   }
 }

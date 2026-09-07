@@ -430,8 +430,9 @@ export async function POST(req: NextRequest) {
       ]
     });
   } catch (err: any) {
+    console.error('Chat API error:', err);
     return NextResponse.json(
-      { error: 'Internal server error', details: err.message },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

@@ -1,6 +1,7 @@
 /**
  * Safe local and session storage helper for Next.js (SSR safe & private mode resilient).
- * Automatically handles JSON parsing, fallback defaults, and avoids hydration mismatches.
+ * Strictly prevents storage of authentication tokens in client localStorage / document.cookie.
+ * Authentication tokens are exclusively handled by server-set HttpOnly, Secure cookies.
  */
 
 export function loadSavedItem<T>(key: string, fallback: T): T {
@@ -42,28 +43,36 @@ export function clearItem(key: string): void {
 export function isAuthenticated(): boolean {
   if (typeof window === 'undefined') return false;
   try {
-    const token = window.localStorage.getItem('kisan_auth_token');
-    const profile = window.localStorage.getItem('kisan_farmer_profile');
-    return Boolean(token && profile);
+    const profile =
+      window.localStorage.getItem('kisan_farmer_profile') ||
+      window.sessionStorage.getItem('kisan_farmer_profile');
+    return Boolean(profile);
   } catch {
     return false;
   }
 }
 
-export function setAuthSession(token: string, profile: any): void {
+export function setAuthSession(tokenOrProfile: any, maybeProfile?: any): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem('kisan_auth_token', token);
+    const profile = maybeProfile || tokenOrProfile;
     saveItem('kisan_farmer_profile', profile);
-    const secureFlag = window.location.protocol === 'https:' ? 'Secure;' : '';
-    document.cookie = `kisan_auth_token=${token}; path=/; max-age=604800; SameSite=Lax; ${secureFlag}`.trim();
+
+    // Explicitly wipe any residual authentication tokens from client-accessible storage
+    window.localStorage.removeItem('kisan_auth_token');
+    window.sessionStorage.removeItem('kisan_auth_token');
   } catch {}
 }
 
-export function clearAuthSession(): void {
+export async function clearAuthSession(): Promise<void> {
   if (typeof window === 'undefined') return;
   try {
-    // 1. Purge all user chat histories and session IDs to prevent cross-account leaks on shared devices
+    // 1. Notify server to invalidate serverless token and clear HttpOnly cookie
+    try {
+      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+    } catch {}
+
+    // 2. Purge user-scoped chat histories and session records from shared devices
     const chatKeysToRemove: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {
       const k = window.localStorage.key(i);
@@ -81,13 +90,11 @@ export function clearAuthSession(): void {
     window.sessionStorage.removeItem('kd_chat_history_v2');
     window.sessionStorage.removeItem('kd_chat_session_id');
 
-    // 2. Clear credentials and active profiles
+    // 3. Clear non-sensitive UI profiles and cached keys
     window.localStorage.removeItem('kisan_auth_token');
     window.localStorage.removeItem('kisan_farmer_profile');
     window.localStorage.removeItem('kd_dashboard_profile');
     window.localStorage.removeItem('kd_custom_gemini_key');
     window.localStorage.removeItem('kd_free_queries_used');
-
-    document.cookie = 'kisan_auth_token=; path=/; max-age=0; SameSite=Lax';
   } catch {}
 }

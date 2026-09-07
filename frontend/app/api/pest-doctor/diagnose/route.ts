@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pestDb from '@/data/pest_database.json';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 interface PestRecord {
   id: string;
@@ -29,6 +30,15 @@ interface PestRecord {
 }
 
 export async function POST(req: NextRequest) {
+  const clientIp = getClientIp(req.headers);
+  const rateLimit = checkRateLimit(`pest_${clientIp}`, 20, 60);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many diagnostic requests. Please wait a moment before trying again.' },
+      { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter) } }
+    );
+  }
+
   try {
     const body = await req.json();
     const cropInput = String(body.crop || '').trim().toLowerCase();
@@ -130,6 +140,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(diagnosis);
   } catch (err: any) {
-    return NextResponse.json({ error: 'Diagnosis failed', details: err.message }, { status: 500 });
+    console.error('[Pest Doctor Diagnose Error]:', err);
+    return NextResponse.json({ error: 'Diagnosis failed. Please try again.' }, { status: 500 });
   }
 }

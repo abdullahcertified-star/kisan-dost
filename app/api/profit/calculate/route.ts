@@ -139,6 +139,7 @@ export async function POST(req: NextRequest) {
       disclaimer: 'Calculated using Punjab Agricultural Economics benchmarks and AMIS market wholesale prices.'
     });
   } catch (err: any) {
-    return NextResponse.json({ error: 'Failed to calculate profit', details: err.message }, { status: 500 });
+    console.error('Profit API error:', err);
+    return NextResponse.json({ error: 'Failed to calculate profit' }, { status: 500 });
   }
 }

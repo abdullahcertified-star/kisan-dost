@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     APP_NAME: str = "Kisan Dost - AI Agricultural Assistant"
     APP_VERSION: str = "0.1.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     
@@ -19,8 +19,11 @@ class Settings(BaseSettings):
     
     # CORS
     CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        origin for origin in [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            os.environ.get("FRONTEND_URL", "")
+        ] if origin
     ]
     
     # Open-Meteo Weather API base URLs

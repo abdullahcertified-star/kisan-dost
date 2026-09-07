@@ -1,9 +1,13 @@
-"""SQLite Database engine, session management, and Base model."""
+import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from backend.app.config import settings
 
-engine = create_async_engine(settings.DATABASE_URL, echo=False)
+db_url = settings.DATABASE_URL
+if not db_url or db_url.startswith("postgresql://") or db_url.startswith("postgres://"):
+    db_url = "sqlite+aiosqlite:////tmp/kisan_dost.db" if os.environ.get("VERCEL") else "sqlite+aiosqlite:///./kisan_dost.db"
+
+engine = create_async_engine(db_url, echo=False)
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
 
