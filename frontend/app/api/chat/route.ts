@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import jwt from 'jsonwebtoken';
+import pool from '@/lib/db';
+import { decryptApiKey } from '@/lib/crypto';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_kisan_dost_key_123!';
 
 const DISTRICT_COORDS: Record<string, { lat: number; lon: number; name: string }> = {
   multan: { lat: 30.1575, lon: 71.5249, name: 'Multan' },
@@ -183,7 +188,32 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const message = (body.message || '').trim();
     const sessionId = body.session_id || 'session_' + Date.now();
-    const customGeminiKey = (body.custom_gemini_key || req.headers.get('x-gemini-api-key') || '').trim();
+    const rawProvidedKey = (body.custom_gemini_key || req.headers.get('x-gemini-api-key') || '').trim();
+    let resolvedKey = rawProvidedKey ? decryptApiKey(rawProvidedKey) : '';
+
+    // If client didn't pass key directly, resolve from authenticated Neon PostgreSQL cookie session
+    if (!resolvedKey) {
+      try {
+        const token =
+          req.cookies.get('kisan_auth_token')?.value ||
+          req.headers.get('authorization')?.replace('Bearer ', '');
+        if (token) {
+          const decoded: any = jwt.verify(token, JWT_SECRET);
+          if (decoded && decoded.id) {
+            const userDbRes = await pool.query(
+              'SELECT gemini_api_key FROM farmers WHERE id = $1 LIMIT 1',
+              [decoded.id]
+            );
+            if (userDbRes.rows.length > 0 && userDbRes.rows[0].gemini_api_key) {
+              resolvedKey = decryptApiKey(userDbRes.rows[0].gemini_api_key);
+            }
+          }
+        }
+      } catch {
+        // Continue to server fallback
+      }
+    }
+
     const incomingHistory: Array<{ role: string; content: string }> = body.history || [];
     const requestedLang = (body.language || body.lang || req.headers.get('x-language') || '').toLowerCase().trim();
 
@@ -294,7 +324,7 @@ export async function POST(req: NextRequest) {
     ];
 
     // 4. Call Google Gemini LLM with Telemetry Grounding & Personal API Key
-    const geminiResult = await callGemini(conversationMessages, extraGrounding, customGeminiKey, forcedLangForGemini);
+    const geminiResult = await callGemini(conversationMessages, extraGrounding, resolvedKey, forcedLangForGemini);
 
     if (geminiResult) {
       // Dynamic follow-up generation based on query context

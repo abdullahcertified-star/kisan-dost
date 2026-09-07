@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
+import { encryptApiKey, maskApiKey, hashApiKey } from '@/lib/crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_kisan_dost_key_123!';
 
@@ -37,6 +38,9 @@ export async function POST(req: NextRequest) {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
+    const rawApiKey = geminiApiKey && geminiApiKey.trim().length > 5 ? geminiApiKey.trim() : null;
+    const encryptedKey = rawApiKey ? encryptApiKey(rawApiKey) : null;
+
     // Insert into Neon 'farmers' table
     const insertResult = await pool.query(
       `INSERT INTO farmers (phone, email, password_hash, name, district, acres, crop, gemini_api_key, registered_at)
@@ -50,7 +54,7 @@ export async function POST(req: NextRequest) {
         district.trim(),
         Number(acres) || 5,
         crop || 'Wheat (گندم)',
-        geminiApiKey ? geminiApiKey.trim() : null,
+        encryptedKey,
       ]
     );
 
@@ -71,13 +75,20 @@ export async function POST(req: NextRequest) {
       [token, newUser.id, 'Farmer', 0, expiresAt]
     );
 
+    const safeUser = {
+      ...newUser,
+      gemini_api_key: maskApiKey(newUser.gemini_api_key),
+      has_gemini_key: Boolean(rawApiKey),
+      gemini_key_hash: rawApiKey ? hashApiKey(rawApiKey) : null,
+    };
+
     // Set secure HttpOnly cookie on response
     const response = NextResponse.json(
       {
         success: true,
         message: 'Farmer registered successfully in Neon PostgreSQL',
         token,
-        user: newUser,
+        user: safeUser,
       },
       { status: 201 }
     );

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
+import { maskApiKey, hashApiKey } from '@/lib/crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_kisan_dost_key_123!';
 
@@ -61,7 +62,13 @@ export async function POST(req: NextRequest) {
       [token, farmer.id, 'Farmer', 0, expiresAt]
     );
 
-    const { password_hash, ...safeUser } = farmer;
+    const { password_hash, ...restUser } = farmer;
+    const safeUser = {
+      ...restUser,
+      gemini_api_key: maskApiKey(farmer.gemini_api_key),
+      has_gemini_key: Boolean(farmer.gemini_api_key),
+      gemini_key_hash: farmer.gemini_api_key ? hashApiKey(farmer.gemini_api_key) : null,
+    };
 
     const response = NextResponse.json({
       success: true,

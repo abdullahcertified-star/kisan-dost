@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('./db');
+const { encryptApiKey, decryptApiKey, maskApiKey, hashApiKey } = require('./lib/crypto');
 require('dotenv').config();
 
 const app = express();
@@ -50,6 +51,10 @@ app.post('/api/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
+    // Encrypt Gemini API Key with AES-256-GCM before saving at rest
+    const rawApiKey = geminiApiKey && geminiApiKey.trim().length > 5 ? geminiApiKey.trim() : null;
+    const encryptedKey = rawApiKey ? encryptApiKey(rawApiKey) : null;
+
     // Insert into farmers table
     const insertResult = await pool.query(
       `INSERT INTO farmers (phone, email, password_hash, name, district, acres, crop, gemini_api_key, registered_at)
@@ -63,7 +68,7 @@ app.post('/api/register', async (req, res) => {
         district.trim(),
         Number(acres) || 5,
         crop || 'Wheat (گندم)',
-        geminiApiKey ? geminiApiKey.trim() : null,
+        encryptedKey,
       ]
     );
 
@@ -93,11 +98,18 @@ app.post('/api/register', async (req, res) => {
       path: '/',
     });
 
+    const safeUser = {
+      ...newUser,
+      gemini_api_key: maskApiKey(newUser.gemini_api_key),
+      has_gemini_key: Boolean(rawApiKey),
+      gemini_key_hash: rawApiKey ? hashApiKey(rawApiKey) : null,
+    };
+
     return res.status(201).json({
       success: true,
       message: 'Farmer registered successfully',
       token,
-      user: newUser,
+      user: safeUser,
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -161,7 +173,13 @@ app.post('/api/login', async (req, res) => {
       path: '/',
     });
 
-    const { password_hash, ...safeUser } = farmer;
+    const { password_hash, ...restUser } = farmer;
+    const safeUser = {
+      ...restUser,
+      gemini_api_key: maskApiKey(farmer.gemini_api_key),
+      has_gemini_key: Boolean(farmer.gemini_api_key),
+      gemini_key_hash: farmer.gemini_api_key ? hashApiKey(farmer.gemini_api_key) : null,
+    };
 
     return res.json({
       success: true,
@@ -210,9 +228,17 @@ app.get('/api/me', async (req, res) => {
       return res.status(404).json({ authenticated: false, error: 'User record not found.' });
     }
 
+    const rawUser = userResult.rows[0];
+    const safeUser = {
+      ...rawUser,
+      gemini_api_key: maskApiKey(rawUser.gemini_api_key),
+      has_gemini_key: Boolean(rawUser.gemini_api_key),
+      gemini_key_hash: rawUser.gemini_api_key ? hashApiKey(rawUser.gemini_api_key) : null,
+    };
+
     return res.json({
       authenticated: true,
-      user: userResult.rows[0],
+      user: safeUser,
     });
   } catch (error) {
     console.error('Profile verification error:', error);

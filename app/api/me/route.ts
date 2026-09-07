@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 
+import { maskApiKey, hashApiKey } from '@/lib/crypto';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_kisan_dost_key_123!';
 
 export async function GET(req: NextRequest) {
@@ -45,9 +47,17 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const rawUser = userResult.rows[0];
+    const safeUser = {
+      ...rawUser,
+      gemini_api_key: maskApiKey(rawUser.gemini_api_key),
+      has_gemini_key: Boolean(rawUser.gemini_api_key),
+      gemini_key_hash: rawUser.gemini_api_key ? hashApiKey(rawUser.gemini_api_key) : null,
+    };
+
     return NextResponse.json({
       authenticated: true,
-      user: userResult.rows[0],
+      user: safeUser,
     });
   } catch (error: any) {
     console.error('Profile verification error:', error);
