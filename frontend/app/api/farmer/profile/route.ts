@@ -70,19 +70,17 @@ export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
 
-    // Persist changes to Neon PostgreSQL database
+    // Persist changes to Neon PostgreSQL database (email is strictly immutable for account security)
     try {
       await pool.query(
         `UPDATE farmers
          SET name = COALESCE($1, name),
-             email = COALESCE($2, email),
-             district = COALESCE($3, district),
-             acres = COALESCE($4, acres),
-             crop = COALESCE($5, crop)
-         WHERE id = $6`,
+             district = COALESCE($2, district),
+             acres = COALESCE($3, acres),
+             crop = COALESCE($4, crop)
+         WHERE id = $5`,
         [
           data.name?.trim() || null,
-          data.email?.trim() || null,
           data.district?.trim() || null,
           data.land_acres ? Number(data.land_acres) : null,
           data.current_crop || null,
