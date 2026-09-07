@@ -134,8 +134,22 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error: any) {
     console.error('[Registration API Error]:', error);
+    const isConnRefused = error?.code === 'ECONNREFUSED' || error?.message?.includes('ECONNREFUSED');
+    const isDbConfig = error?.message?.includes('DATABASE_URL');
+    if (isDbConfig) {
+      return NextResponse.json(
+        { error: 'Database configuration missing: DATABASE_URL is not configured in environment variables.' },
+        { status: 503 }
+      );
+    }
+    if (isConnRefused) {
+      return NextResponse.json(
+        { error: 'Database connection refused. Please verify DATABASE_URL is configured with ?sslmode=require in Vercel settings.' },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
-      { error: 'An unexpected internal error occurred during registration.' },
+      { error: 'Registration service temporarily unavailable. Please verify database settings.' },
       { status: 500 }
     );
   }
