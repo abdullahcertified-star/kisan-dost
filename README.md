@@ -22,6 +22,7 @@ Explore the live production deployment hosted on Vercel:
 | :--- | :--- | :--- |
 | **🌾 Farm Management Dashboard** | [`/`](https://kisan-dost-beige.vercel.app) | Overview with live weather, agro-KPIs, and quick tool actions |
 | **🤖 Multi-Agent AI Agronomist** | [`/assistant`](https://kisan-dost-beige.vercel.app/assistant) | Bilingual chatbot with voice synthesis and BYOK API key support |
+| **👤 Farmer Profile & Security** | [`/profile`](https://kisan-dost-beige.vercel.app/profile) | Cloud profile, AES-256 encrypted Gemini key manager, and password change |
 | **🎯 1-Click Guided Demo Flow** | [`/demo`](https://kisan-dost-beige.vercel.app/demo) | Automated 5-pillar tour (Agronomy → Pest → Mandi → Weather → Profit) |
 | **🌦️ 5-Day Agro-Weather Radar** | [`/weather`](https://kisan-dost-beige.vercel.app/weather) | Live Open-Meteo satellite forecasts, frost risk, and irrigation advice |
 | **📈 AMIS Mandi Rate Explorer** | [`/market`](https://kisan-dost-beige.vercel.app/market) | Real-time wholesale prices across 100+ Punjab mandis in PKR/40kg |
@@ -32,6 +33,7 @@ Explore the live production deployment hosted on Vercel:
 | **🌾 Crop Suitability Catalog** | [`/crops`](https://kisan-dost-beige.vercel.app/crops) | Agro-ecological crop recommendations by season and water availability |
 | **📡 ADK Live Trace Monitor** | [`/observability`](https://kisan-dost-beige.vercel.app/observability) | Real-time agent dispatch timeline, tool latencies, and token counters |
 | **🔒 Farmer Authentication** | [`/login`](https://kisan-dost-beige.vercel.app/login) \| [`/register`](https://kisan-dost-beige.vercel.app/register) | Secure cloud authentication backed by Neon Serverless PostgreSQL |
+| **📄 Technical Architecture PDF** | [`docs/Technical_Doc.pdf`](https://github.com/abdullahcertified-star/kisan-dost/blob/main/docs/Kisan_Dost_Technical_Documentation.pdf) | 12-page comprehensive architecture, security & runbook document |
 | **🩺 System Health Endpoint** | [`/api/health`](https://kisan-dost-beige.vercel.app/api/health) | Live runtime diagnostic probe for DB connectivity, JWT, and AI keys |
 
 ---
@@ -142,11 +144,13 @@ All agricultural capabilities are implemented as typed function tools with stric
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-* **🔐 Authenticated Encryption at Rest (AES-256-GCM)**: User-provided Google AI Studio Gemini API keys are encrypted with 256-bit AES in Galois/Counter Mode (`<iv>:<tag>:<ciphertext>`), guaranteeing cryptographic privacy.
+* **🔐 Authenticated Encryption at Rest (AES-256-GCM)**: User-provided Google AI Studio Gemini API keys are encrypted with 256-bit AES in Galois/Counter Mode (`<iv>:<tag>:<ciphertext>`), guaranteeing cryptographic privacy at rest in Neon PostgreSQL.
+* **☁️ Cloud API Key Persistence in Profile**: Farmers can manage and save their Gemini API keys directly in [`/profile`](https://kisan-dost-beige.vercel.app/profile). Keys are securely decrypted only for authenticated requests, completely eliminating repeated API key prompts across logouts, new devices, and browser sessions.
+* **⏱️ 15-Minute Inactivity Auto-Logout**: Automatic sliding-window session inactivity tracking with cross-tab `BroadcastChannel` synchronization to protect farm management data on shared village terminals.
 * **🔑 Resilient Key Derivation**: If dedicated `JWT_SECRET` or `ENCRYPTION_KEY` variables are omitted in hosting environments, the app automatically derives deterministic 256-bit keys from `DATABASE_URL` via HMAC-SHA256, eliminating deployment crashes.
 * **🗄️ Neon Serverless PostgreSQL**: Dedicated connection pooling (`pg.Pool`) with SSL (`rejectUnauthorized: false`), automatic alias resolution (`DATABASE_URL`, `POSTGRES_URL`, `NEON_DATABASE_URL`), and unconstrained `TEXT` schemas to support encrypted credentials and decimal acreage.
 * **🛑 Sliding-Window Rate Limiter**: 30 requests/minute per client IP quota with HTTP 429 and `Retry-After` headers to protect upstream AI quotas from automated scraping.
-* **🧹 User-Scoped Shared Device Privacy**: Chat histories are indexed by authenticated user IDs (`kd_chat_history_<user_id>`). Upon logout, all session tokens and transcripts are purged from client storage to safeguard farmers using shared village terminals.
+* **🧹 User-Scoped Shared Device Privacy**: Chat histories are indexed by authenticated user IDs (`kd_chat_history_<user_id>`). Session revocation purges auth tokens while preserving the farmer's personal cloud profile and API key connection.
 
 ---
 
@@ -262,6 +266,7 @@ KISAN_DOST/
 ├── app/                        # Next.js App Router (Full-Stack Frontend)
 │   ├── page.tsx                # Farm Management SaaS Dashboard
 │   ├── assistant/page.tsx      # Multi-Agent Interactive Chatbot
+│   ├── profile/page.tsx        # Farm OS Profile, Encrypted API Key & Password Security
 │   ├── weather/page.tsx        # 5-Day Agro-Weather Radar & Telemetry
 │   ├── demo/page.tsx           # 1-Click Guided Hackathon Flow
 │   ├── observability/page.tsx  # ADK Live Trace Monitor
@@ -274,13 +279,16 @@ KISAN_DOST/
 │   ├── crops/page.tsx          # Crop Suitability Catalog
 │   ├── login/page.tsx          # Farmer Authentication & Security
 │   ├── register/page.tsx       # Farmer Registration with Validation
-│   ├── profile/page.tsx        # Farm & Agro-Ecological Profile
 │   └── api/                    # Next.js Serverless Route Handlers
 │       ├── chat/route.ts       # Rate-Limited Multi-Agent Chat Endpoint
 │       ├── login/route.ts      # Neon PostgreSQL Login Handler
 │       ├── register/route.ts   # Neon PostgreSQL Registration Handler
-│       ├── me/route.ts         # Authenticated Profile Route
+│       ├── me/route.ts         # Authenticated Profile & Decrypted Key Provider
 │       ├── logout/route.ts     # Session Token Revocation
+│       ├── farmer/             # Profile & User Management Routes
+│       │   ├── api-key/route.ts         # Encrypted Gemini API Key Endpoint
+│       │   ├── change-password/route.ts # Bcrypt Password Rotation
+│       │   └── profile/route.ts         # Full Farmer Profile Data Handler
 │       ├── weather/[district]/ # Weather Telemetry Route
 │       ├── market/prices/      # Mandi Wholesale Rates
 │       ├── fertilizer/         # NPK Fertilizer Calculation
@@ -289,6 +297,9 @@ KISAN_DOST/
 │       ├── schemes/            # Govt Scheme Matching
 │       ├── observability/      # ADK Trace Visualizer Endpoints
 │       └── health/route.ts     # System Diagnostic Health Probe
+├── docs/                       # Enterprise Technical Documentation
+│   ├── Kisan_Dost_Technical_Documentation.pdf   # 12-Page Print-Ready PDF
+│   └── Kisan_Dost_Technical_Documentation.html  # Interactive HTML Whitepaper
 ├── backend/                    # Core Python Agricultural Engine
 │   └── app/
 │       ├── agents/             # Triage, Agronomy, Pest Doctor, Market, Finance
