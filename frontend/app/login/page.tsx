@@ -272,10 +272,9 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       water: 'Canal + Tube Well',
     });
 
-    if (finalApiKey && finalApiKey.trim().length > 5) {
+    const isMasked = Boolean(finalApiKey && (finalApiKey.includes('•') || finalApiKey.includes('...') || finalApiKey.includes('***') || finalApiKey.includes('*')));
+    if (finalApiKey && finalApiKey.trim().length > 5 && !isMasked) {
       localStorage.setItem('kd_custom_gemini_key', finalApiKey.trim());
-    } else {
-      localStorage.removeItem('kd_custom_gemini_key');
     }
 
     // Step 2: Authenticate Gemini Key
@@ -365,12 +364,17 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       }
 
       // Launch Dashboard session with authenticated Neon PostgreSQL user
+      const restoredKey =
+        data.user.gemini_api_key_plain ||
+        (typeof window !== 'undefined' ? localStorage.getItem('kd_custom_gemini_key') : '') ||
+        '';
+
       triggerCinematicLogin(
         data.user.name,
         data.user.district,
         data.user.acres,
         data.user.crop,
-        data.user.gemini_api_key || '',
+        restoredKey,
         data.token,
         data.user.phone || loginPhoneOrEmail.trim(),
         data.user.email || (loginPhoneOrEmail.includes('@') ? loginPhoneOrEmail.trim() : '')

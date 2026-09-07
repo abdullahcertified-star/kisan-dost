@@ -126,12 +126,29 @@ export default function AssistantPage() {
     window.addEventListener('kd_language_change', onLangChange);
 
     const profile = loadSavedItem<any>('kisan_farmer_profile', null);
-    const savedKey = localStorage.getItem('kd_custom_gemini_key') || profile?.gemini_api_key || '';
-    if (savedKey && !localStorage.getItem('kd_custom_gemini_key')) {
-      localStorage.setItem('kd_custom_gemini_key', savedKey);
+    const candidateKey = localStorage.getItem('kd_custom_gemini_key') || profile?.gemini_api_key_plain || '';
+    const isCleanKey = candidateKey && candidateKey.trim().length > 5 && !candidateKey.includes('•') && !candidateKey.includes('...') && !candidateKey.includes('***') && !candidateKey.includes('*');
+
+    if (isCleanKey) {
+      if (!localStorage.getItem('kd_custom_gemini_key')) {
+        localStorage.setItem('kd_custom_gemini_key', candidateKey.trim());
+      }
+      setCustomApiKey(candidateKey.trim());
+      setInputKey(candidateKey.trim());
+    } else {
+      // Auto-restore saved key from user's account in database if logged in
+      fetch('/api/me')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.authenticated && data?.user?.gemini_api_key_plain) {
+            const key = data.user.gemini_api_key_plain.trim();
+            localStorage.setItem('kd_custom_gemini_key', key);
+            setCustomApiKey(key);
+            setInputKey(key);
+          }
+        })
+        .catch(() => {});
     }
-    setCustomApiKey(savedKey);
-    setInputKey(savedKey);
 
     const used = Number(localStorage.getItem('kd_free_queries_used') || '0');
     setFreeQueriesUsed(used);
@@ -256,11 +273,12 @@ export default function AssistantPage() {
         content: m.text,
       }));
 
-      const userGeminiKey = localStorage.getItem('kd_custom_gemini_key') || customApiKey || '';
+      const profile = loadSavedItem<any>('kisan_farmer_profile', null);
+      const userGeminiKey = localStorage.getItem('kd_custom_gemini_key') || customApiKey || profile?.gemini_api_key_plain || '';
       const currentLang = localStorage.getItem('kd_lang') || lang || 'en';
 
-      // Option 1 Quota Security Guard: 5 free trial queries on shared server key
-      const hasPersonalKey = Boolean(userGeminiKey && userGeminiKey.trim().length > 10);
+      const isCleanUserKey = Boolean(userGeminiKey && userGeminiKey.trim().length > 10 && !userGeminiKey.includes('•') && !userGeminiKey.includes('...') && !userGeminiKey.includes('***') && !userGeminiKey.includes('*'));
+      const hasPersonalKey = isCleanUserKey || Boolean(profile?.has_gemini_key);
       if (!hasPersonalKey) {
         const usedCount = Number(localStorage.getItem('kd_free_queries_used') || '0');
         if (usedCount >= 5) {
@@ -293,13 +311,13 @@ export default function AssistantPage() {
         headers: {
           'Content-Type': 'application/json',
           'x-language': currentLang,
-          ...(userGeminiKey ? { 'x-gemini-api-key': userGeminiKey } : {})
+          ...(isCleanUserKey ? { 'x-gemini-api-key': userGeminiKey.trim() } : {})
         },
         body: JSON.stringify({
           message: query,
           session_id: sessionId,
           history: historyPayload,
-          custom_gemini_key: userGeminiKey,
+          ...(isCleanUserKey ? { custom_gemini_key: userGeminiKey.trim() } : {}),
           language: currentLang,
           lang: currentLang,
         }),
@@ -614,6 +632,11 @@ export default function AssistantPage() {
                     localStorage.removeItem('kd_custom_gemini_key');
                     setCustomApiKey('');
                     setShowKeyModal(false);
+                    fetch('/api/farmer/api-key', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ apiKey: '' }),
+                    }).catch(() => {});
                   }}
                   className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
                 >
@@ -626,9 +649,20 @@ export default function AssistantPage() {
                     if (trimmed) {
                       localStorage.setItem('kd_custom_gemini_key', trimmed);
                       setCustomApiKey(trimmed);
+                      // Persist to user's database account so it never gets lost across logouts
+                      fetch('/api/farmer/api-key', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ apiKey: trimmed }),
+                      }).catch(() => {});
                     } else {
                       localStorage.removeItem('kd_custom_gemini_key');
                       setCustomApiKey('');
+                      fetch('/api/farmer/api-key', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ apiKey: '' }),
+                      }).catch(() => {});
                     }
                     setKeySavedToast(true);
                     setTimeout(() => {

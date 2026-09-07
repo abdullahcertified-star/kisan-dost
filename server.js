@@ -224,11 +224,13 @@ app.post('/api/login', async (req, res) => {
     });
 
     const { password_hash, ...restUser } = farmer;
+    const plainApiKey = farmer.gemini_api_key ? decryptApiKey(farmer.gemini_api_key) : '';
     const safeUser = {
       ...restUser,
       gemini_api_key: maskApiKey(farmer.gemini_api_key),
-      has_gemini_key: Boolean(farmer.gemini_api_key),
-      gemini_key_hash: farmer.gemini_api_key ? hashApiKey(farmer.gemini_api_key) : null,
+      gemini_api_key_plain: plainApiKey,
+      has_gemini_key: Boolean(plainApiKey),
+      gemini_key_hash: plainApiKey ? hashApiKey(plainApiKey) : null,
     };
 
     return res.json({
@@ -278,11 +280,13 @@ app.get('/api/me', async (req, res) => {
     }
 
     const rawUser = userResult.rows[0];
+    const plainApiKey = rawUser.gemini_api_key ? decryptApiKey(rawUser.gemini_api_key) : '';
     const safeUser = {
       ...rawUser,
       gemini_api_key: maskApiKey(rawUser.gemini_api_key),
-      has_gemini_key: Boolean(rawUser.gemini_api_key),
-      gemini_key_hash: rawUser.gemini_api_key ? hashApiKey(rawUser.gemini_api_key) : null,
+      gemini_api_key_plain: plainApiKey,
+      has_gemini_key: Boolean(plainApiKey),
+      gemini_key_hash: plainApiKey ? hashApiKey(plainApiKey) : null,
     };
 
     return res.json({
@@ -320,6 +324,44 @@ app.post('/api/logout', async (req, res) => {
   } catch (error) {
     console.error('[Logout Error]:', error);
     return res.status(500).json({ error: 'Logout failed.' });
+  }
+});
+
+// 6. Update Gemini API Key Route (/api/farmer/api-key)
+app.post('/api/farmer/api-key', async (req, res) => {
+  try {
+    const token =
+      req.cookies.kisan_auth_token ||
+      (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
+        ? req.headers.authorization.split(' ')[1]
+        : null);
+
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'Invalid or expired session token' });
+    }
+
+    const { apiKey } = req.body;
+    const trimmed = (apiKey || '').trim();
+    const encryptedKey = trimmed.length > 5 ? encryptApiKey(trimmed) : null;
+
+    await pool.query('UPDATE farmers SET gemini_api_key = $1 WHERE id = $2', [encryptedKey, decoded.id]);
+
+    return res.json({
+      success: true,
+      message: 'Gemini API key updated successfully',
+      has_gemini_key: Boolean(encryptedKey),
+      gemini_api_key: encryptedKey ? maskApiKey(encryptedKey) : '',
+    });
+  } catch (error) {
+    console.error('[API Key Update Error]:', error);
+    return res.status(500).json({ error: 'Failed to update Gemini API key' });
   }
 });
 

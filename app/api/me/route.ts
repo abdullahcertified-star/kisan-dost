@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 
-import { maskApiKey, hashApiKey } from '@/lib/crypto';
+import { decryptApiKey, maskApiKey, hashApiKey } from '@/lib/crypto';
 import { getJwtSecret } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
@@ -51,11 +51,13 @@ export async function GET(req: NextRequest) {
     }
 
     const rawUser = userResult.rows[0];
+    const plainApiKey = rawUser.gemini_api_key ? decryptApiKey(rawUser.gemini_api_key) : '';
     const safeUser = {
       ...rawUser,
       gemini_api_key: maskApiKey(rawUser.gemini_api_key),
-      has_gemini_key: Boolean(rawUser.gemini_api_key),
-      gemini_key_hash: rawUser.gemini_api_key ? hashApiKey(rawUser.gemini_api_key) : null,
+      gemini_api_key_plain: plainApiKey,
+      has_gemini_key: Boolean(plainApiKey),
+      gemini_key_hash: plainApiKey ? hashApiKey(plainApiKey) : null,
     };
 
     return NextResponse.json({

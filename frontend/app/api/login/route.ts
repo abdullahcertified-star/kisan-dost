@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
-import { maskApiKey, hashApiKey } from '@/lib/crypto';
+import { decryptApiKey, maskApiKey, hashApiKey } from '@/lib/crypto';
 import { getJwtSecret } from '@/lib/env';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
@@ -89,11 +89,13 @@ export async function POST(req: NextRequest) {
     );
 
     const { password_hash, ...restUser } = farmer;
+    const plainApiKey = farmer.gemini_api_key ? decryptApiKey(farmer.gemini_api_key) : '';
     const safeUser = {
       ...restUser,
       gemini_api_key: maskApiKey(farmer.gemini_api_key),
-      has_gemini_key: Boolean(farmer.gemini_api_key),
-      gemini_key_hash: farmer.gemini_api_key ? hashApiKey(farmer.gemini_api_key) : null,
+      gemini_api_key_plain: plainApiKey,
+      has_gemini_key: Boolean(plainApiKey),
+      gemini_key_hash: plainApiKey ? hashApiKey(plainApiKey) : null,
     };
 
     const response = NextResponse.json({

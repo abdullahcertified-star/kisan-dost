@@ -170,36 +170,19 @@ export function setAuthSession(tokenOrProfile: any, maybeProfile?: any): void {
 export async function clearAuthSession(): Promise<void> {
   if (typeof window === 'undefined') return;
   try {
-    // 1. Notify server to invalidate serverless token and clear HttpOnly cookie
+    // 1. Invalidate server token and clear HttpOnly cookie
     try {
       await fetch('/api/logout', { method: 'POST', credentials: 'include' });
     } catch {}
 
-    // 2. Purge user-scoped chat histories and session records from shared devices
-    const chatKeysToRemove: string[] = [];
-    for (let i = 0; i < window.localStorage.length; i++) {
-      const k = window.localStorage.key(i);
-      if (k && (k.startsWith('kd_chat_history') || k.startsWith('kd_chat_session'))) {
-        chatKeysToRemove.push(k);
-      }
-    }
-    chatKeysToRemove.forEach((k) => {
-      window.localStorage.removeItem(k);
-      window.sessionStorage.removeItem(k);
-    });
-
-    window.localStorage.removeItem('kd_chat_history_v2');
-    window.localStorage.removeItem('kd_chat_session_id');
-    window.sessionStorage.removeItem('kd_chat_history_v2');
-    window.sessionStorage.removeItem('kd_chat_session_id');
-
-    // 3. Clear non-sensitive UI profiles and cached keys
+    // 2. Clear active authentication session and temporary profile state
     window.localStorage.removeItem('kisan_auth_token');
     window.localStorage.removeItem('kisan_farmer_profile');
     window.localStorage.removeItem('kd_dashboard_profile');
-    window.localStorage.removeItem('kd_custom_gemini_key');
-    window.localStorage.removeItem('kd_free_queries_used');
     window.localStorage.removeItem('kd_last_activity');
     window.sessionStorage.removeItem('kd_last_activity');
+
+    // NOTE: kd_custom_gemini_key and user-scoped kd_chat_history_* are intentionally preserved
+    // so farmers do not have to re-enter their API key and their chat is remembered when they log back in.
   } catch {}
 }
