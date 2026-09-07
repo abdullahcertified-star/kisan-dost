@@ -194,6 +194,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       current_crop: finalCrop,
       role: 'Farm Manager & Owner',
       phone: phoneOrEmail,
+      gemini_api_key: (finalApiKey && finalApiKey.trim().length > 5) ? finalApiKey.trim() : '',
     };
     const token = serverToken || `kd_tok_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
     setAuthSession(token, profile);
@@ -209,6 +210,8 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
 
     if (finalApiKey && finalApiKey.trim().length > 5) {
       localStorage.setItem('kd_custom_gemini_key', finalApiKey.trim());
+    } else {
+      localStorage.removeItem('kd_custom_gemini_key');
     }
 
     // Step 2: Authenticate Gemini Key

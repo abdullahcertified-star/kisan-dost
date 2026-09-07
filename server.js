@@ -54,7 +54,7 @@ app.post('/api/register', async (req, res) => {
     const insertResult = await pool.query(
       `INSERT INTO farmers (phone, email, password_hash, name, district, acres, crop, gemini_api_key, registered_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-       RETURNING id, phone, email, name, district, acres, crop, registered_at`,
+       RETURNING id, phone, email, name, district, acres, crop, gemini_api_key, registered_at`,
       [
         cleanPhone,
         cleanEmail,

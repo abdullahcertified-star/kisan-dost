@@ -84,15 +84,40 @@ function getGeminiKey(): string | null {
   }
 }
 
+async function executeGeminiRequest(apiKey: string, payload: any, models: string[]) {
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(12000),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          return { text, model };
+        }
+      } else {
+        const errText = await res.text().catch(() => '');
+        console.warn(`Gemini model ${model} status ${res.status}:`, errText.substring(0, 120));
+      }
+    } catch (e) {
+      console.warn(`Gemini model ${model} attempt failed:`, e);
+    }
+  }
+  return null;
+}
+
 async function callGemini(
   messages: Array<{ role: string; content: string }>,
   extraGrounding?: string,
   userCustomKey?: string,
   forcedLanguage?: 'urdu' | 'english' | null
-) {
-  const apiKey = (userCustomKey && userCustomKey.trim().length > 10) ? userCustomKey.trim() : getGeminiKey();
-  if (!apiKey) return null;
-
+): Promise<{ text: string; model: string; usingCustomKey: boolean } | null> {
   // Working models in priority order
   const models = ['gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.8-flash'];
 
@@ -131,25 +156,22 @@ Even if the user's prompt contains Urdu script or Roman Urdu, translate all agro
     }
   };
 
-  for (const model of models) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(12000),
-      });
+  // 1. Prioritize User's Personal Gemini API Key if provided
+  const hasUserKey = Boolean(userCustomKey && userCustomKey.trim().length > 10);
+  if (hasUserKey) {
+    const userResult = await executeGeminiRequest(userCustomKey!.trim(), payload, models);
+    if (userResult) {
+      return { ...userResult, usingCustomKey: true };
+    }
+    console.warn('User custom Gemini API key failed or was rate-limited; falling back to server key...');
+  }
 
-      if (res.ok) {
-        const data = await res.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          return { text, model };
-        }
-      }
-    } catch (e) {
-      console.warn(`Gemini model ${model} attempt failed:`, e);
+  // 2. Fallback to Shared Server Gemini Key
+  const serverKey = getGeminiKey();
+  if (serverKey) {
+    const serverResult = await executeGeminiRequest(serverKey, payload, models);
+    if (serverResult) {
+      return { ...serverResult, usingCustomKey: false };
     }
   }
 
@@ -306,7 +328,7 @@ export async function POST(req: NextRequest) {
         specialist_icon: specialist.icon,
         response: geminiResult.text,
         model_used: geminiResult.model,
-        using_custom_key: Boolean(customGeminiKey && customGeminiKey.length > 10),
+        using_custom_key: geminiResult.usingCustomKey,
         suggested_followups: followups,
         debug_trace: {
           trace_id: 'trc_' + Date.now().toString(36),
@@ -315,7 +337,7 @@ export async function POST(req: NextRequest) {
           latency_ms: 650,
           detected_language: lang,
           telemetry_grounded: Boolean(extraGrounding),
-          using_user_key: Boolean(customGeminiKey && customGeminiKey.length > 10),
+          using_user_key: geminiResult.usingCustomKey,
         }
       });
     }
@@ -353,6 +375,8 @@ export async function POST(req: NextRequest) {
       specialist_title: specialist.name,
       specialist_icon: specialist.icon,
       response: fallbackText,
+      model_used: 'Offline Grounding Fallback',
+      using_custom_key: false,
       suggested_followups: [
         lang === 'urdu' ? 'کھاد کی درست مقدار بتائیں' : 'How many bags of fertilizer?',
         lang === 'urdu' ? 'تازہ ترین منڈی ریٹ چیک کریں' : 'Check latest mandi rates',

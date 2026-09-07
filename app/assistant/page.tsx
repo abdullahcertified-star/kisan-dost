@@ -43,6 +43,7 @@ interface Message {
   specialistTitle?: string;
   specialistIcon?: string;
   modelUsed?: string;
+  usingCustomKey?: boolean;
   suggestedFollowups?: string[];
   feedback?: 'up' | 'down' | null;
   timestamp: string;
@@ -124,7 +125,11 @@ export default function AssistantPage() {
     };
     window.addEventListener('kd_language_change', onLangChange);
 
-    const savedKey = localStorage.getItem('kd_custom_gemini_key') || '';
+    const profile = loadSavedItem<any>('kisan_farmer_profile', null);
+    const savedKey = localStorage.getItem('kd_custom_gemini_key') || profile?.gemini_api_key || '';
+    if (savedKey && !localStorage.getItem('kd_custom_gemini_key')) {
+      localStorage.setItem('kd_custom_gemini_key', savedKey);
+    }
     setCustomApiKey(savedKey);
     setInputKey(savedKey);
 
@@ -292,6 +297,7 @@ export default function AssistantPage() {
           specialistTitle: data.specialist_title || 'Agronomy Specialist',
           specialistIcon: data.specialist_icon || '🌾',
           modelUsed: data.model_used || 'Gemini Multi-Agent',
+          usingCustomKey: Boolean(data.using_custom_key),
           suggestedFollowups: data.suggested_followups || [],
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         };
@@ -705,6 +711,15 @@ export default function AssistantPage() {
                           {msg.modelUsed && (
                             <span className="hidden sm:inline-block text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
                               {msg.modelUsed}
+                            </span>
+                          )}
+                          {msg.usingCustomKey ? (
+                            <span className="inline-flex items-center space-x-1 text-[10px] bg-emerald-100/90 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full font-bold shadow-2xs">
+                              <span>✨ Personal Gemini Key</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center space-x-1 text-[10px] bg-amber-100/80 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full font-medium">
+                              <span>⚡ Shared Server Key</span>
                             </span>
                           )}
                         </div>
