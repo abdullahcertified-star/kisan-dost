@@ -10,7 +10,7 @@ import {
   FarmerProfileData,
 } from '@/lib/api';
 import { loadSavedItem } from '@/lib/storage';
-import { User, Mail, Phone, MapPin, Sprout, ShieldCheck, CheckCircle2, AlertCircle, Save, Lock, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Sprout, ShieldCheck, CheckCircle2, AlertCircle, Save, Lock, KeyRound, Eye, EyeOff, Sparkles, Key, ExternalLink } from 'lucide-react';
 
 const PROVINCES = [
   'Punjab',
@@ -91,6 +91,14 @@ export default function ProfilePage() {
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdFeedback, setPwdFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Gemini API Key Profile States
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [maskedApiKey, setMaskedApiKey] = useState('');
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [apiKeyLoading, setApiKeyLoading] = useState(false);
+  const [apiKeyFeedback, setApiKeyFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   const getComputedAcres = (): number => {
     const num = Number(landInput);
     if (!landInput || isNaN(num) || num <= 0) return 0;
@@ -151,6 +159,71 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSaveApiKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApiKeyFeedback(null);
+    const trimmed = apiKeyInput.trim();
+    if (!trimmed) {
+      setApiKeyFeedback({ type: 'error', message: 'Please enter a valid API key. (برائے مہربانی درست اے پی آئی کلید درج کریں)' });
+      return;
+    }
+
+    setApiKeyLoading(true);
+    try {
+      const res = await fetch('/api/farmer/api-key', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setApiKeyFeedback({ type: 'error', message: data.error || 'Failed to save API key to profile.' });
+        return;
+      }
+
+      setHasApiKey(true);
+      setMaskedApiKey(data.gemini_api_key || (trimmed.substring(0, 6) + '••••••••' + trimmed.substring(trimmed.length - 4)));
+      setApiKeyInput('');
+      localStorage.setItem('kd_custom_gemini_key', trimmed);
+      setApiKeyFeedback({
+        type: 'success',
+        message: 'Google Gemini API key securely saved in your database profile! AI Chat will now use it automatically. (اے پی آئی کلید کامیابی سے آپ کے کلاؤڈ پروفائل میں محفوظ ہو گئی ہے)',
+      });
+    } catch (err: any) {
+      setApiKeyFeedback({ type: 'error', message: 'Connection error: ' + (err.message || 'Server error') });
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
+
+  const handleRemoveApiKey = async () => {
+    setApiKeyFeedback(null);
+    setApiKeyLoading(true);
+    try {
+      const res = await fetch('/api/farmer/api-key', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: '' }),
+      });
+      if (res.ok) {
+        setHasApiKey(false);
+        setMaskedApiKey('');
+        setApiKeyInput('');
+        localStorage.removeItem('kd_custom_gemini_key');
+        setApiKeyFeedback({
+          type: 'success',
+          message: 'Gemini API key removed from profile. (کلید پروفائل سے ہٹا دی گئی ہے)',
+        });
+      }
+    } catch (err: any) {
+      setApiKeyFeedback({ type: 'error', message: 'Failed to remove API key: ' + err.message });
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
+
   // Load existing profile from /api/me or localStorage on mount
   useEffect(() => {
     // 1. Fetch live authenticated user profile from Neon DB
@@ -164,11 +237,27 @@ export default function ProfilePage() {
           if (data.user.district) setDistrict(data.user.district);
           if (data.user.acres) setLandInput(data.user.acres);
           if (data.user.crop) setCurrentCrop(data.user.crop);
+          if (data.user.gemini_api_key) {
+            setMaskedApiKey(data.user.gemini_api_key);
+          }
+          if (data.user.has_gemini_key) {
+            setHasApiKey(true);
+          }
+          if (data.user.gemini_api_key_plain) {
+            localStorage.setItem('kd_custom_gemini_key', data.user.gemini_api_key_plain);
+            setHasApiKey(true);
+          }
         }
       })
       .catch((err) => {
         console.warn('Could not load profile from /api/me:', err);
       });
+
+    const localKey = localStorage.getItem('kd_custom_gemini_key');
+    if (localKey && localKey.trim().length > 10 && !localKey.includes('•') && !localKey.includes('*')) {
+      setHasApiKey(true);
+      setMaskedApiKey(localKey.substring(0, 6) + '••••••••' + localKey.substring(localKey.length - 4));
+    }
 
     // 2. Fallback to client-side cached profile
     const localProfile = loadSavedItem<any>('kisan_farmer_profile', null) || loadSavedItem<any>('kd_dashboard_profile', null);
@@ -564,6 +653,129 @@ export default function ProfilePage() {
             </div>
           </form>
         </div>
+
+          {/* Dedicated Google Gemini API Key Management Card */}
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8">
+            <div className="border-b border-slate-100 pb-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center space-x-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                </div>
+                <span>Google Gemini API Key (اے آئی کی کلید)</span>
+              </h3>
+
+              {hasApiKey ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Encrypted in Profile (محفوظ)</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span>Not Linked (کلید درج نہیں)</span>
+                </span>
+              )}
+            </div>
+
+            {/* Status & Explanation */}
+            <div className="bg-slate-50 border border-slate-200/70 rounded-2xl p-4 mb-5 text-xs text-slate-600 space-y-2">
+              <p className="leading-relaxed">
+                {hasApiKey ? (
+                  <>
+                    ✅ <strong>Active Key Configured:</strong> Your Google Gemini API key is securely encrypted (AES-256-GCM) in your cloud profile. When you log out and log back in from any device or browser, your key is preserved permanently.
+                  </>
+                ) : (
+                  <>
+                    ⚠️ <strong>No Personal Key Connected:</strong> Save your personal Google Gemini API key here so you never have to re-enter it when chatting with the AI Agronomist or diagnosing crop diseases.
+                  </>
+                )}
+              </p>
+              {hasApiKey && maskedApiKey && (
+                <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2 font-mono text-xs text-slate-700">
+                  <span>Current Key: <strong>{maskedApiKey}</strong></span>
+                  <span className="text-[10px] text-emerald-600 font-sans font-semibold bg-emerald-50 px-2 py-0.5 rounded-md">
+                    🔒 Verified
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {apiKeyFeedback && (
+              <div
+                className={`p-3.5 mb-4 rounded-xl text-xs flex items-center space-x-2 border ${
+                  apiKeyFeedback.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                    : 'bg-rose-50 text-rose-900 border-rose-200'
+                }`}
+              >
+                {apiKeyFeedback.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                )}
+                <span className="font-medium">{apiKeyFeedback.message}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveApiKey} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span>{hasApiKey ? 'Update Gemini API Key (نئی کلید تبدیل کریں)' : 'Enter Gemini API Key (اے آئی کی کلید درج کریں)'}</span>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold underline flex items-center gap-1"
+                  >
+                    <span>Get Free Key</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    placeholder="e.g. AIzaSy..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-10 py-2.5 text-sm text-slate-900 font-mono focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-hidden transition"
+                  />
+                  <Key className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Obtain your free lifetime key at <strong>aistudio.google.com</strong>.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <button
+                  type="submit"
+                  disabled={apiKeyLoading || !apiKeyInput.trim()}
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold py-2.5 px-5 rounded-xl shadow-xs transition-all text-xs flex items-center space-x-2 cursor-pointer"
+                >
+                  <Key className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>{apiKeyLoading ? 'Saving to Profile...' : 'Save Key to Profile (محفوظ کریں)'}</span>
+                </button>
+
+                {hasApiKey && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveApiKey}
+                    disabled={apiKeyLoading}
+                    className="text-xs font-semibold text-slate-500 hover:text-rose-600 px-3 py-2 rounded-xl hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer"
+                  >
+                    Remove Key (کلید ہٹائیں)
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
 
           {/* Account Security & Change Password Card */}
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8">

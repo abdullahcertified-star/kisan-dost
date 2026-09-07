@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 import { getJwtSecret } from '@/lib/env';
+import { encryptApiKey, decryptApiKey, maskApiKey, hashApiKey } from '@/lib/crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
   let dbFarmer: any = null;
   try {
     const res = await pool.query(
-      'SELECT id, phone, email, name, district, acres, crop FROM farmers WHERE id = $1 LIMIT 1',
+      'SELECT id, phone, email, name, district, acres, crop, gemini_api_key FROM farmers WHERE id = $1 LIMIT 1',
       [user.id]
     );
     if (res.rows.length > 0) {
@@ -40,6 +41,9 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.warn('Failed to read farmer from DB:', err);
   }
+
+  const plainApiKey = dbFarmer?.gemini_api_key ? decryptApiKey(dbFarmer.gemini_api_key) : '';
+  const maskedApiKey = dbFarmer?.gemini_api_key ? maskApiKey(dbFarmer.gemini_api_key) : '';
 
   const cached = PROFILES[String(user.id)] || {};
   const userProfile = {
@@ -55,6 +59,10 @@ export async function GET(req: NextRequest) {
     water_availability: cached.water_availability || 'Canal + Tubewell',
     current_crop: dbFarmer?.crop || cached.current_crop || 'Wheat (گندم)',
     preferred_language: cached.preferred_language || 'urdu',
+    gemini_api_key: maskedApiKey,
+    gemini_api_key_plain: plainApiKey,
+    has_gemini_key: Boolean(plainApiKey),
+    gemini_key_hash: plainApiKey ? hashApiKey(plainApiKey) : null,
     created_at: cached.created_at || new Date().toISOString(),
   };
 
@@ -70,7 +78,19 @@ export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
 
-    // Persist changes to Neon PostgreSQL database (email is strictly immutable for account security)
+    // 1. Handle Gemini API Key encryption & update
+    let updatedEncryptedKey: string | null | undefined = undefined;
+    const incomingKey = (data.gemini_api_key || data.apiKey || '').trim();
+    if (incomingKey) {
+      const isMasked = incomingKey.includes('•') || incomingKey.includes('*') || incomingKey.includes('...');
+      if (!isMasked && incomingKey.length > 5) {
+        updatedEncryptedKey = encryptApiKey(incomingKey);
+      }
+    } else if (data.gemini_api_key === '' || data.apiKey === '') {
+      updatedEncryptedKey = null;
+    }
+
+    // 2. Persist changes to Neon PostgreSQL database
     try {
       await pool.query(
         `UPDATE farmers
@@ -87,13 +107,31 @@ export async function POST(req: NextRequest) {
           user.id,
         ]
       );
+
+      if (updatedEncryptedKey !== undefined) {
+        await pool.query('UPDATE farmers SET gemini_api_key = $1 WHERE id = $2', [updatedEncryptedKey, user.id]);
+      }
     } catch (dbErr) {
       console.warn('Could not persist profile changes to Neon DB:', dbErr);
     }
 
+    // Fetch updated values
+    let latestPlainKey = '';
+    let latestMaskedKey = '';
+    try {
+      const checkRes = await pool.query('SELECT gemini_api_key FROM farmers WHERE id = $1 LIMIT 1', [user.id]);
+      if (checkRes.rows.length > 0 && checkRes.rows[0].gemini_api_key) {
+        latestPlainKey = decryptApiKey(checkRes.rows[0].gemini_api_key);
+        latestMaskedKey = maskApiKey(checkRes.rows[0].gemini_api_key);
+      }
+    } catch {}
+
     const profile = {
       ...data,
       id: user.id,
+      gemini_api_key: latestMaskedKey,
+      gemini_api_key_plain: latestPlainKey,
+      has_gemini_key: Boolean(latestPlainKey),
       updated_at: new Date().toISOString(),
     };
     PROFILES[String(user.id)] = profile;
