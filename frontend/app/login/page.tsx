@@ -179,13 +179,14 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     finalDist: string,
     finalAcres: number | string,
     finalCrop: string,
-    finalApiKey: string
+    finalApiKey: string,
+    serverToken?: string
   ) => {
     setIsAuthenticating(true);
     setAuthStep(1);
     setAuthProgress(20);
 
-    // Save profile to local storage & generate real secure token
+    // Save profile to session store with server JWT
     const profile = {
       name: finalName,
       district: finalDist,
@@ -194,7 +195,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       role: 'Farm Manager & Owner',
       phone: phoneOrEmail,
     };
-    const token = `kd_tok_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    const token = serverToken || `kd_tok_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
     setAuthSession(token, profile);
 
     saveItem('kd_dashboard_profile', {
@@ -255,25 +256,6 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     }, 2500);
   };
 
-  // Cryptographic SHA-256 Password Hashing Utility
-  const hashPassword = async (plainText: string): Promise<string> => {
-    if (!plainText) return '';
-    try {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(plainText + '_kisan_dost_salt_2026');
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-    } catch {
-      let hash = 0;
-      for (let i = 0; i < plainText.length; i++) {
-        hash = (hash << 5) - hash + plainText.charCodeAt(i);
-        hash |= 0;
-      }
-      return 'h_' + Math.abs(hash).toString(16);
-    }
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
@@ -287,53 +269,50 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       return;
     }
 
-    const registeredUsers = loadSavedItem<any[]>('kisan_registered_farmers', []);
-    const inputClean = phoneOrEmail.trim().toLowerCase();
+    try {
+      // Secure async fetch to Neon PostgreSQL Login API
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneOrEmail: phoneOrEmail.trim(),
+          password,
+        }),
+      });
 
-    // Check if matching registered user or default admin credentials
-    const matchedUser = registeredUsers.find(
-      (u) =>
-        (u.phone && u.phone.trim().toLowerCase() === inputClean) ||
-        (u.email && u.email.trim().toLowerCase() === inputClean)
-    );
-
-    const isDefaultAdmin =
-      (inputClean === '0300-1234567' || inputClean === 'farmer@kisandost.pk' || inputClean === 'admin') &&
-      (password === 'Kisan@2026!' || password === 'admin123');
-
-    if (!matchedUser && !isDefaultAdmin) {
-      setAuthError(
-        lang === 'ur'
-          ? 'اس موبائل نمبر یا ای میل پر کوئی کسان رجسٹرڈ نہیں ہے۔ برائے مہربانی پہلے نیا کسان رجسٹر کریں۔'
-          : 'No account found with this phone/email. Please register first.'
-      );
-      return;
-    }
-
-    if (matchedUser) {
-      const enteredHash = await hashPassword(password);
-      const isMatch =
-        (matchedUser.passwordHash && matchedUser.passwordHash === enteredHash) ||
-        (matchedUser.password && matchedUser.password === password);
-
-      if (!isMatch) {
+      const data = await res.json();
+      if (!res.ok) {
         setAuthError(
-          lang === 'ur'
-            ? 'درج کردہ پاس ورڈ درست نہیں ہے۔ برائے مہربانی دوبارہ کوشش کریں۔'
-            : 'Incorrect password. Please verify and try again.'
+          data.error ||
+            (lang === 'ur'
+              ? 'موبائل نمبر یا پاس ورڈ درست نہیں ہے۔ برائے مہربانی دوبارہ کوشش کریں۔'
+              : 'Invalid credentials. Please verify your phone/email and password.')
         );
         return;
       }
+
+      // Purge legacy client-side unhashed user store
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('kisan_registered_farmers');
+      }
+
+      // Launch Dashboard session with authenticated Neon PostgreSQL user
+      triggerCinematicLogin(
+        data.user.name,
+        data.user.district,
+        data.user.acres,
+        data.user.crop,
+        data.user.gemini_api_key || geminiApiKey || '',
+        data.token
+      );
+    } catch (err: any) {
+      setAuthError(
+        lang === 'ur'
+          ? 'ڈیٹا بیس سے رابطہ نہ ہو سکا۔ برائے مہربانی دوبارہ کوشش کریں۔'
+          : 'Database connection failed: ' + (err.message || 'Server unreachable')
+      );
     }
-
-    // Validated login
-    const targetName = matchedUser?.name || (isDefaultAdmin ? 'Chaudhry Ahmad Farm' : 'Farmer ' + phoneOrEmail.split('@')[0]);
-    const targetDistrict = matchedUser?.district || district;
-    const targetAcres = matchedUser?.acres || acres;
-    const targetCrop = matchedUser?.crop || crop;
-    const targetKey = matchedUser?.geminiApiKey || geminiApiKey || localStorage.getItem('kd_custom_gemini_key') || '';
-
-    triggerCinematicLogin(targetName, targetDistrict, targetAcres, targetCrop, targetKey);
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -346,24 +325,6 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     }
     if (!phoneOrEmail.trim()) {
       setAuthError(lang === 'ur' ? 'موبائل نمبر یا ای میل درج کریں۔' : 'Please enter your phone number or email.');
-      return;
-    }
-
-    // Duplicate check: Check if phone or email is already registered
-    const registeredUsers = loadSavedItem<any[]>('kisan_registered_farmers', []);
-    const inputClean = phoneOrEmail.trim().toLowerCase();
-    const alreadyExists = registeredUsers.some(
-      (u) =>
-        (u.phone && u.phone.trim().toLowerCase() === inputClean) ||
-        (u.email && u.email.trim().toLowerCase() === inputClean)
-    );
-
-    if (alreadyExists) {
-      setAuthError(
-        lang === 'ur'
-          ? 'یہ موبائل نمبر یا ای میل پہلے سے رجسٹرڈ ہے۔ برائے مہربانی نیچے "لاگ اِن" کریں یا دوسرا نمبر استعمال کریں۔'
-          : 'This phone number or email is already registered. Please sign in instead.'
-      );
       return;
     }
 
@@ -394,25 +355,55 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
       return;
     }
 
-    // Cryptographically hash password before saving (Never store plaintext password)
-    const passwordHash = await hashPassword(password);
+    try {
+      // Secure async fetch to Neon PostgreSQL Register API
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: phoneOrEmail.trim(),
+          email: phoneOrEmail.includes('@') ? phoneOrEmail.trim() : null,
+          password,
+          name: name.trim(),
+          district,
+          acres: Number(acres) || 5,
+          crop,
+          geminiApiKey: geminiApiKey.trim(),
+        }),
+      });
 
-    const newUser = {
-      name: name.trim(),
-      district,
-      acres: Number(acres) || 5,
-      crop,
-      phone: phoneOrEmail.trim(),
-      email: phoneOrEmail.trim(),
-      passwordHash,
-      geminiApiKey: geminiApiKey.trim(),
-      registeredAt: new Date().toISOString(),
-    };
+      const data = await res.json();
+      if (!res.ok) {
+        setAuthError(
+          data.error ||
+            (lang === 'ur'
+              ? 'رجسٹریشن مکمل نہ ہو سکی۔ برائے مہربانی دوبارہ کوشش کریں۔'
+              : 'Registration failed. Please verify your details.')
+        );
+        return;
+      }
 
-    registeredUsers.push(newUser);
-    saveItem('kisan_registered_farmers', registeredUsers);
+      // Purge legacy client-side user database
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('kisan_registered_farmers');
+      }
 
-    triggerCinematicLogin(name.trim(), district, Number(acres) || 5, crop, geminiApiKey.trim());
+      triggerCinematicLogin(
+        data.user.name,
+        data.user.district,
+        data.user.acres,
+        data.user.crop,
+        geminiApiKey.trim(),
+        data.token
+      );
+    } catch (err: any) {
+      setAuthError(
+        lang === 'ur'
+          ? 'سرور سے رابطہ نہ ہو سکا۔ برائے مہربانی دوبارہ کوشش کریں۔'
+          : 'Server connection error: ' + (err.message || 'Registration failed')
+      );
+    }
   };
 
   return (
