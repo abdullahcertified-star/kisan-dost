@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { loadSavedItem, clearAuthSession, isAuthenticated } from '@/lib/storage';
+import { loadSavedItem, clearAuthSession, isAuthenticated, setupInactivityTracker } from '@/lib/storage';
 import FloatingBot from '@/components/FloatingBot';
 import {
   LayoutDashboard,
@@ -61,11 +61,14 @@ export default function SaaSLayout({
   };
 
   useEffect(() => {
-    // If logged out, require login to get access, otherwise no access
+    // If logged out or session expired, redirect to login
     if (!isAuthenticated()) {
       window.location.replace('/login');
       return;
     }
+
+    // Initialize 15-minute inactivity session tracking and cross-tab sync
+    const cleanupTracker = setupInactivityTracker();
 
     // Guard against browser -> (Forward) or <- (Back) button restoring page after logout
     const handlePageShow = (e: PageTransitionEvent) => {
@@ -87,7 +90,10 @@ export default function SaaSLayout({
       setLang(savedLang);
     }
 
-    return () => window.removeEventListener('pageshow', handlePageShow);
+    return () => {
+      cleanupTracker();
+      window.removeEventListener('pageshow', handlePageShow);
+    };
   }, []);
 
   const toggleLanguage = (newLang: 'en' | 'ur') => {

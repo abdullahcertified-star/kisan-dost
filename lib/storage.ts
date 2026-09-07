@@ -40,13 +40,115 @@ export function clearItem(key: string): void {
   } catch {}
 }
 
+export const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes of inactivity
+
+export function recordActivity(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem('kd_last_activity', Date.now().toString());
+  } catch {}
+}
+
+export function isSessionExpired(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const last = window.localStorage.getItem('kd_last_activity');
+    if (!last) return false;
+    const elapsed = Date.now() - parseInt(last, 10);
+    return elapsed > INACTIVITY_TIMEOUT_MS;
+  } catch {
+    return false;
+  }
+}
+
+export function setupInactivityTracker(onTimeout?: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  // Record initial activity on mount
+  recordActivity();
+
+  let lastRecorded = Date.now();
+  const THROTTLE_MS = 10000; // Throttle to reduce localStorage writes
+
+  const handleActivity = () => {
+    const now = Date.now();
+    if (now - lastRecorded >= THROTTLE_MS) {
+      lastRecorded = now;
+      recordActivity();
+    }
+  };
+
+  const events: (keyof WindowEventMap)[] = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+  events.forEach((evt) => {
+    window.addEventListener(evt, handleActivity, { passive: true });
+  });
+
+  const checkTimeout = () => {
+    if (isSessionExpired()) {
+      clearAuthSession();
+      if (onTimeout) {
+        onTimeout();
+      } else {
+        window.location.replace('/login?timeout=1');
+      }
+    }
+  };
+
+  const checkInterval = setInterval(checkTimeout, 10000);
+
+  const handleVisibility = () => {
+    if (document.visibilityState === 'visible') {
+      if (isSessionExpired()) {
+        clearAuthSession();
+        if (onTimeout) {
+          onTimeout();
+        } else {
+          window.location.replace('/login?timeout=1');
+        }
+      } else {
+        handleActivity();
+      }
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibility);
+
+  // Cross-tab synchronization: stay in sync across all tabs
+  const handleStorage = (e: StorageEvent) => {
+    if (e.key === 'kisan_farmer_profile' && !e.newValue) {
+      // Session invalidated or logged out in another tab
+      window.location.replace('/login?timeout=1');
+    } else if (e.key === 'kd_last_activity' && e.newValue) {
+      // Activity refreshed in another tab
+      lastRecorded = parseInt(e.newValue, 10) || Date.now();
+    }
+  };
+  window.addEventListener('storage', handleStorage);
+
+  return () => {
+    events.forEach((evt) => {
+      window.removeEventListener(evt, handleActivity);
+    });
+    clearInterval(checkInterval);
+    document.removeEventListener('visibilitychange', handleVisibility);
+    window.removeEventListener('storage', handleStorage);
+  };
+}
+
 export function isAuthenticated(): boolean {
   if (typeof window === 'undefined') return false;
   try {
     const profile =
       window.localStorage.getItem('kisan_farmer_profile') ||
       window.sessionStorage.getItem('kisan_farmer_profile');
-    return Boolean(profile);
+    if (!profile) return false;
+
+    // Auto-logout if inactive for longer than 15 minutes
+    if (isSessionExpired()) {
+      clearAuthSession();
+      return false;
+    }
+
+    return true;
   } catch {
     return false;
   }
@@ -57,6 +159,7 @@ export function setAuthSession(tokenOrProfile: any, maybeProfile?: any): void {
   try {
     const profile = maybeProfile || tokenOrProfile;
     saveItem('kisan_farmer_profile', profile);
+    recordActivity();
 
     // Explicitly wipe any residual authentication tokens from client-accessible storage
     window.localStorage.removeItem('kisan_auth_token');
@@ -96,5 +199,7 @@ export async function clearAuthSession(): Promise<void> {
     window.localStorage.removeItem('kd_dashboard_profile');
     window.localStorage.removeItem('kd_custom_gemini_key');
     window.localStorage.removeItem('kd_free_queries_used');
+    window.localStorage.removeItem('kd_last_activity');
+    window.sessionStorage.removeItem('kd_last_activity');
   } catch {}
 }

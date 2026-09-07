@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { loadSavedItem, clearAuthSession, isAuthenticated } from '@/lib/storage';
+import { loadSavedItem, clearAuthSession, isAuthenticated, setupInactivityTracker } from '@/lib/storage';
 import { API_BASE_URL } from '@/lib/api';
 import FloatingBot from '@/components/FloatingBot';
 import {
@@ -80,13 +80,16 @@ export default function AgriculturalSaaSDashboard() {
     percentage: 78,
   });
 
-  // Load saved profile if available, require login if not authenticated
+  // Load saved profile if available, require login if not authenticated or session expired
   useEffect(() => {
-    // If logged out, require login to get access, otherwise no access
+    // If logged out or session expired, require login
     if (!isAuthenticated()) {
       window.location.replace('/login');
       return;
     }
+
+    // Initialize 15-minute inactivity session tracking and cross-tab sync
+    const cleanupTracker = setupInactivityTracker();
 
     // BFCache / History navigation guard: When clicking browser forward/back buttons
     const handlePageShow = (e: PageTransitionEvent) => {
@@ -105,7 +108,10 @@ export default function AgriculturalSaaSDashboard() {
       if (profile.district) setFarmZone(`${profile.district} Agro Zone`);
     }
 
-    return () => window.removeEventListener('pageshow', handlePageShow);
+    return () => {
+      cleanupTracker();
+      window.removeEventListener('pageshow', handlePageShow);
+    };
   }, []);
 
   // Fetch live weather data

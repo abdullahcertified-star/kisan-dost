@@ -126,6 +126,7 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
   const [authStep, setAuthStep] = useState(0);
   const [authProgress, setAuthProgress] = useState(0);
   const [isLoggedOut, setIsLoggedOut] = useState(false);
+  const [isSessionTimeout, setIsSessionTimeout] = useState(false);
   const [activeSession, setActiveSession] = useState<{
     name: string;
     district: string;
@@ -192,13 +193,22 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
     const savedLang = localStorage.getItem('kd_lang') as 'en' | 'ur' | null;
     if (savedLang) setLang(savedLang);
 
-    if (typeof window !== 'undefined' && window.location.search.includes('logged_out')) {
-      setIsLoggedOut(true);
+    if (typeof window !== 'undefined') {
+      if (window.location.search.includes('logged_out')) {
+        setIsLoggedOut(true);
+      }
+      if (window.location.search.includes('timeout') || window.location.search.includes('session_expired')) {
+        setIsSessionTimeout(true);
+      }
     }
 
-    // Only redirect if user is already authenticated AND not arriving via explicit logout
-    const isExplicitLogout = typeof window !== 'undefined' && window.location.search.includes('logged_out');
-    if (!isExplicitLogout && isAuthenticated()) {
+    // Only redirect if user is already authenticated AND not arriving via explicit logout or inactivity timeout
+    const isExplicitLogoutOrTimeout =
+      typeof window !== 'undefined' &&
+      (window.location.search.includes('logged_out') ||
+        window.location.search.includes('timeout') ||
+        window.location.search.includes('session_expired'));
+    if (!isExplicitLogoutOrTimeout && isAuthenticated()) {
       let targetRedirect = '/';
       if (typeof window !== 'undefined') {
         const urlParams = new URLSearchParams(window.location.search);
@@ -680,10 +690,27 @@ export default function LoginPage({ initialIsRegister = false }: { initialIsRegi
 
 
               {/* Logged Out Notice */}
-              {isLoggedOut && (
+              {isLoggedOut && !isSessionTimeout && (
                 <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center space-x-2 animate-in fade-in">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                   <span>You have been safely signed out. (آپ لاگ آؤٹ ہو چکے ہیں)</span>
+                </div>
+              )}
+
+              {/* 15-Min Inactivity Session Timeout Notice */}
+              {isSessionTimeout && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs flex items-start space-x-2.5 animate-in fade-in slide-in-from-top-1">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-amber-300">
+                      {lang === 'ur' ? 'سیشن ختم ہو گیا (15 منٹ غیر فعال)' : 'Session Expired (15 Minutes Inactivity)'}
+                    </p>
+                    <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                      {lang === 'ur'
+                        ? 'آپ کی سیکیورٹی کی خاطر، 15 منٹ تک کوئی سرگرمی نہ ہونے پر آپ کا سیشن ختم کر دیا گیا ہے۔ برائے مہربانی دوبارہ لاگ ان کریں۔'
+                        : 'For your security, you were automatically signed out after 15 minutes of inactivity. Please sign in again.'}
+                    </p>
+                  </div>
                 </div>
               )}
 
