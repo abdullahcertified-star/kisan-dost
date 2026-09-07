@@ -6,6 +6,8 @@ import pool from '@/lib/db';
 import { maskApiKey, hashApiKey } from '@/lib/crypto';
 import { getJwtSecret } from '@/lib/env';
 
+export const dynamic = 'force-dynamic';
+
 const JWT_SECRET = getJwtSecret();
 
 export async function POST(req: NextRequest) {

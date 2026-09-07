@@ -5,6 +5,8 @@ import { decryptApiKey } from '@/lib/crypto';
 import { getJwtSecret, getGeminiServerKey } from '@/lib/env';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
+export const dynamic = 'force-dynamic';
+
 const JWT_SECRET = getJwtSecret();
 
 const DISTRICT_COORDS: Record<string, { lat: number; lon: number; name: string }> = {
