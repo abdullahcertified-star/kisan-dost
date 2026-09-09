@@ -29,6 +29,44 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const apiKey = (body.apiKey || '').trim();
+
+    // If key is provided, validate it against Google AI Studio API
+    if (apiKey && apiKey.length > 5) {
+      try {
+        const testRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: 'ping' }] }] }),
+            signal: AbortSignal.timeout(6000),
+          }
+        );
+        if (!testRes.ok) {
+          const errText = await testRes.text().catch(() => '');
+          if (testRes.status === 400 || testRes.status === 401 || testRes.status === 403) {
+            if (
+              errText.includes('API_KEY_INVALID') ||
+              errText.includes('API key not valid') ||
+              errText.includes('PERMISSION_DENIED') ||
+              errText.includes('API key expired') ||
+              errText.includes('CONSUMER_INVALID')
+            ) {
+              return NextResponse.json(
+                {
+                  error: 'This API key was rejected by Google AI Studio (API key deleted or invalid). Please generate a valid key from aistudio.google.com.',
+                  key_invalid: true,
+                },
+                { status: 400 }
+              );
+            }
+          }
+        }
+      } catch (probeErr) {
+        // Network glitch or timeout: proceed with saving
+      }
+    }
+
     const encryptedKey = apiKey.length > 5 ? encryptApiKey(apiKey) : null;
 
     await pool.query(

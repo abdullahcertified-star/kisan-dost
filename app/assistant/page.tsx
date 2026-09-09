@@ -109,6 +109,8 @@ export default function AssistantPage() {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [inputKey, setInputKey] = useState('');
   const [keySavedToast, setKeySavedToast] = useState(false);
+  const [keyValidationError, setKeyValidationError] = useState('');
+  const [isValidatingKey, setIsValidatingKey] = useState(false);
   const [freeQueriesUsed, setFreeQueriesUsed] = useState<number>(0);
   const [lang, setLang] = useState<'en' | 'ur'>('en');
   const hasAutoSentParam = useRef(false);
@@ -323,8 +325,59 @@ export default function AssistantPage() {
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        // If Gemini API key was deleted in Google AI Studio or invalid
+        if (data?.key_invalid || data?.error === 'INVALID_API_KEY') {
+          localStorage.removeItem('kd_custom_gemini_key');
+          setCustomApiKey('');
+          setInputKey('');
+
+          const profile = loadSavedItem<any>('kisan_farmer_profile', null);
+          if (profile) {
+            delete profile.gemini_api_key_plain;
+            profile.has_gemini_key = false;
+            saveItem('kisan_farmer_profile', profile);
+          }
+
+          const botMessage: Message = {
+            id: 'msg_agent_' + Date.now(),
+            sender: 'agent',
+            text: data.response || (
+              currentLang === 'ur'
+                ? '❌ **گوگل اے آئی اسٹوڈیو API Key غیر فعال یا ڈیلیٹ ہو چکی ہے!**\n\nآپ کی Gemini API Key گوگل اے آئی اسٹوڈیو سے ڈیلیٹ یا تبدیل کر دی گئی ہے، جس کی وجہ سے اے آئی چیٹ بوٹ نے گفتگو روک دی ہے۔ براہِ کرم نئی اور درست API Key داخل کریں۔'
+                : '❌ **Google Gemini API Key Deleted or Invalid!**\n\nYour Gemini API key was deleted or invalidated in Google AI Studio (`aistudio.google.com`). The AI assistant has stopped chatting to prevent broken requests.\n\nPlease provide a new, active Gemini API key to resume chatting.'
+            ),
+            agentName: 'security',
+            specialistTitle: 'API Key Security Guard',
+            specialistIcon: '🔑',
+            modelUsed: 'Security Check',
+            usingCustomKey: false,
+            suggestedFollowups: [
+              currentLang === 'ur' ? 'نئی API Key کیسے بنائیں؟' : 'How to create a new API Key?',
+              currentLang === 'ur' ? 'Google AI Studio کھولیں' : 'Open Google AI Studio'
+            ],
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isError: true,
+          };
+          setMessages((prev) => [...prev, botMessage]);
+          setKeyValidationError(data.response || 'API Key was deleted in Google AI Studio.');
+          setShowKeyModal(true);
+          return;
+        }
+
+        throw new Error(data?.error || `Server returned HTTP ${res.status}`);
+      }
+
+      if (data) {
+        if (data.key_invalid || data.error === 'INVALID_API_KEY') {
+          localStorage.removeItem('kd_custom_gemini_key');
+          setCustomApiKey('');
+          setInputKey('');
+          setShowKeyModal(true);
+        }
+
         const botMessage: Message = {
           id: 'msg_agent_' + Date.now(),
           sender: 'agent',
@@ -338,8 +391,6 @@ export default function AssistantPage() {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         };
         setMessages((prev) => [...prev, botMessage]);
-      } else {
-        throw new Error(`Server returned HTTP ${res.status}`);
       }
     } catch (err: any) {
       const errorMsg: Message = {
@@ -616,10 +667,17 @@ export default function AssistantPage() {
                   />
                 </div>
 
+                {keyValidationError && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start space-x-2 animate-in fade-in">
+                    <span className="text-rose-600 font-bold shrink-0">⚠️</span>
+                    <span className="leading-relaxed">{keyValidationError}</span>
+                  </div>
+                )}
+
                 {keySavedToast && (
                   <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center space-x-1.5 animate-in fade-in">
                     <Check className="w-4 h-4 text-emerald-600" />
-                    <span>Gemini API Key saved and activated!</span>
+                    <span>Gemini API Key verified and activated!</span>
                   </div>
                 )}
               </div>
@@ -627,8 +685,10 @@ export default function AssistantPage() {
               <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
+                  disabled={isValidatingKey}
                   onClick={() => {
                     setInputKey('');
+                    setKeyValidationError('');
                     localStorage.removeItem('kd_custom_gemini_key');
                     setCustomApiKey('');
                     setShowKeyModal(false);
@@ -644,18 +704,11 @@ export default function AssistantPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
+                  disabled={isValidatingKey}
+                  onClick={async () => {
                     const trimmed = inputKey.trim();
-                    if (trimmed) {
-                      localStorage.setItem('kd_custom_gemini_key', trimmed);
-                      setCustomApiKey(trimmed);
-                      // Persist to user's database account so it never gets lost across logouts
-                      fetch('/api/farmer/api-key', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ apiKey: trimmed }),
-                      }).catch(() => {});
-                    } else {
+                    setKeyValidationError('');
+                    if (!trimmed) {
                       localStorage.removeItem('kd_custom_gemini_key');
                       setCustomApiKey('');
                       fetch('/api/farmer/api-key', {
@@ -663,16 +716,50 @@ export default function AssistantPage() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ apiKey: '' }),
                       }).catch(() => {});
-                    }
-                    setKeySavedToast(true);
-                    setTimeout(() => {
-                      setKeySavedToast(false);
                       setShowKeyModal(false);
-                    }, 800);
+                      return;
+                    }
+
+                    // Validate key with server / Google AI Studio
+                    setIsValidatingKey(true);
+                    try {
+                      const res = await fetch('/api/farmer/api-key', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ apiKey: trimmed }),
+                      });
+                      const data = await res.json().catch(() => null);
+
+                      if (!res.ok) {
+                        setKeyValidationError(data?.error || 'This API key was rejected by Google AI Studio (API key deleted or invalid).');
+                        setIsValidatingKey(false);
+                        return;
+                      }
+
+                      // Key is valid and saved in DB!
+                      localStorage.setItem('kd_custom_gemini_key', trimmed);
+                      setCustomApiKey(trimmed);
+                      setKeySavedToast(true);
+                      setTimeout(() => {
+                        setKeySavedToast(false);
+                        setShowKeyModal(false);
+                      }, 800);
+                    } catch (e: any) {
+                      setKeyValidationError('Network error while validating key: ' + (e?.message || 'Please check connection'));
+                    } finally {
+                      setIsValidatingKey(false);
+                    }
                   }}
-                  className="px-4 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition"
+                  className="px-4 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white shadow-xs transition flex items-center space-x-1.5"
                 >
-                  Save &amp; Connect Key
+                  {isValidatingKey ? (
+                    <>
+                      <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      <span>Verifying with Google...</span>
+                    </>
+                  ) : (
+                    <span>Save &amp; Connect Key</span>
+                  )}
                 </button>
               </div>
             </div>

@@ -349,6 +349,41 @@ app.post('/api/farmer/api-key', async (req, res) => {
 
     const { apiKey } = req.body;
     const trimmed = (apiKey || '').trim();
+
+    // If key is provided, validate it with Google AI Studio API
+    if (trimmed.length > 5) {
+      try {
+        const testRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${trimmed}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: 'ping' }] }] }),
+            signal: AbortSignal.timeout(6000),
+          }
+        );
+        if (!testRes.ok) {
+          const errText = await testRes.text().catch(() => '');
+          if (testRes.status === 400 || testRes.status === 401 || testRes.status === 403) {
+            if (
+              errText.includes('API_KEY_INVALID') ||
+              errText.includes('API key not valid') ||
+              errText.includes('PERMISSION_DENIED') ||
+              errText.includes('API key expired') ||
+              errText.includes('CONSUMER_INVALID')
+            ) {
+              return res.status(400).json({
+                error: 'This API key was rejected by Google AI Studio (API key deleted or invalid).',
+                key_invalid: true,
+              });
+            }
+          }
+        }
+      } catch (probeErr) {
+        // Network glitch or timeout: proceed with saving
+      }
+    }
+
     const encryptedKey = trimmed.length > 5 ? encryptApiKey(trimmed) : null;
 
     await pool.query('UPDATE farmers SET gemini_api_key = $1 WHERE id = $2', [encryptedKey, decoded.id]);

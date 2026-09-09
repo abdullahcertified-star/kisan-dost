@@ -7,24 +7,23 @@ import { fetchWeather } from '@/lib/api';
 import { WeatherReport } from '@/types';
 import { loadSavedItem, saveItem } from '@/lib/storage';
 
-const POPULAR_CITIES = [
-  'Multan',
-  'Faisalabad',
-  'Lahore',
-  'Sargodha',
-  'Bahawalpur',
-  'Rahim Yar Khan',
-  'Sahiwal',
-  'Gujranwala',
-  'Hyderabad',
-  'Sukkur',
-  'Peshawar',
-  'Swat',
-];
+import { PAKISTAN_CITIES, findPakistanCity } from '@/lib/cities';
+
+const PROVINCES = [
+  'All Pakistan',
+  'Punjab',
+  'Sindh',
+  'Khyber Pakhtunkhwa',
+  'Balochistan',
+  'Islamabad',
+  'Azad Kashmir',
+  'Gilgit-Baltistan',
+] as const;
 
 export default function WeatherPage() {
   const [selectedCity, setSelectedCity] = useState<string>('Multan');
   const [searchInput, setSearchInput] = useState<string>('Multan');
+  const [selectedProvince, setSelectedProvince] = useState<string>('All Pakistan');
   const [weather, setWeather] = useState<WeatherReport | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +56,9 @@ export default function WeatherPage() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchInput.trim()) {
-      loadWeather(searchInput.trim());
+      const match = findPakistanCity(searchInput.trim());
+      const targetName = match ? match.name : searchInput.trim();
+      loadWeather(targetName);
     }
   };
 
@@ -69,6 +70,10 @@ export default function WeatherPage() {
       return dateStr;
     }
   };
+
+  const filteredCities = selectedProvince === 'All Pakistan'
+    ? PAKISTAN_CITIES.filter((c) => c.isPopular)
+    : PAKISTAN_CITIES.filter((c) => c.province === selectedProvince);
 
   return (
     <SaaSLayout
@@ -98,35 +103,68 @@ export default function WeatherPage() {
           <form onSubmit={handleSearchSubmit} className="flex items-center space-x-2">
             <input
               type="text"
+              list="pakistan-cities-list"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search district (e.g. Faisalabad, Multan)..."
-              className="bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+              placeholder="Search any Pakistani city (e.g. Quetta, Sukkur, Swat)..."
+              className="bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs w-64 sm:w-80"
             />
+            <datalist id="pakistan-cities-list">
+              {PAKISTAN_CITIES.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.urduName} — {c.province}
+                </option>
+              ))}
+            </datalist>
             <button
               type="submit"
               disabled={loading}
-              className="bg-emerald-800 hover:bg-emerald-900 disabled:opacity-50 text-white text-sm font-bold px-4 py-2 rounded-xl shadow transition"
+              className="bg-emerald-800 hover:bg-emerald-900 disabled:opacity-50 text-white text-sm font-bold px-4 py-2 rounded-xl shadow transition whitespace-nowrap cursor-pointer"
             >
-              Check
+              Check Weather
             </button>
           </form>
         </div>
 
-        {/* Quick City Chips (Multan, Faisalabad, Lahore featured) */}
-        <div className="flex items-center space-x-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
-          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Popular Mandis:</span>
-          {POPULAR_CITIES.map((city) => (
+        {/* Province / Region Selector Tabs */}
+        <div className="flex items-center space-x-1.5 overflow-x-auto pb-2 mb-3 no-scrollbar text-xs">
+          <span className="font-bold text-slate-500 whitespace-nowrap mr-1">Region:</span>
+          {PROVINCES.map((prov) => (
             <button
-              key={city}
-              onClick={() => loadWeather(city)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition ${
-                selectedCity.toLowerCase() === city.toLowerCase()
-                  ? 'bg-emerald-800 text-white shadow'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              key={prov}
+              type="button"
+              onClick={() => setSelectedProvince(prov)}
+              className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition cursor-pointer ${
+                selectedProvince === prov
+                  ? 'bg-emerald-800 text-white shadow-xs'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
               }`}
             >
-              {city}
+              {prov}
+            </button>
+          ))}
+        </div>
+
+        {/* Quick City Chips for Selected Province / Popular */}
+        <div className="flex items-center space-x-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
+          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
+            {selectedProvince === 'All Pakistan' ? 'Featured Mandis:' : `${selectedProvince} Cities:`}
+          </span>
+          {filteredCities.map((city) => (
+            <button
+              key={city.id}
+              onClick={() => {
+                loadWeather(city.name);
+              }}
+              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition cursor-pointer flex items-center space-x-1 ${
+                selectedCity.toLowerCase() === city.name.toLowerCase() ||
+                selectedCity.toLowerCase() === city.id.toLowerCase()
+                  ? 'bg-emerald-800 text-white shadow-xs'
+                  : 'bg-white text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 border border-slate-200'
+              }`}
+            >
+              <span>{city.name}</span>
+              <span className="text-[10px] opacity-75">({city.urduName})</span>
             </button>
           ))}
         </div>

@@ -4,33 +4,13 @@ import pool from '@/lib/db';
 import { decryptApiKey } from '@/lib/crypto';
 import { getJwtSecret, getGeminiServerKey } from '@/lib/env';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { findPakistanCity, PAKISTAN_COORDINATES_MAP } from '@/lib/cities';
 
 export const dynamic = 'force-dynamic';
 
 const JWT_SECRET = getJwtSecret();
 
-const DISTRICT_COORDS: Record<string, { lat: number; lon: number; name: string }> = {
-  multan: { lat: 30.1575, lon: 71.5249, name: 'Multan' },
-  lahore: { lat: 31.5204, lon: 74.3587, name: 'Lahore' },
-  faisalabad: { lat: 31.4504, lon: 73.1350, name: 'Faisalabad' },
-  bahawalpur: { lat: 29.3544, lon: 71.6911, name: 'Bahawalpur' },
-  rawalpindi: { lat: 33.5651, lon: 73.0169, name: 'Rawalpindi' },
-  gujranwala: { lat: 32.1877, lon: 74.1945, name: 'Gujranwala' },
-  sargodha: { lat: 32.0836, lon: 72.6711, name: 'Sargodha' },
-  sahiwal: { lat: 30.6682, lon: 73.1114, name: 'Sahiwal' },
-  khanewal: { lat: 30.3017, lon: 71.9321, name: 'Khanewal' },
-  vehari: { lat: 30.0419, lon: 72.3528, name: 'Vehari' },
-  lodhran: { lat: 29.5405, lon: 71.6336, name: 'Lodhran' },
-  jhang: { lat: 31.2781, lon: 72.3317, name: 'Jhang' },
-  okara: { lat: 30.8081, lon: 73.4458, name: 'Okara' },
-  pakpattan: { lat: 30.3410, lon: 73.3866, name: 'Pakpattan' },
-  sheikhupura: { lat: 31.7131, lon: 73.9783, name: 'Sheikhupura' },
-  kasur: { lat: 31.1179, lon: 74.4408, name: 'Kasur' },
-  karachi: { lat: 24.8607, lon: 67.0011, name: 'Karachi' },
-  peshawar: { lat: 34.0151, lon: 71.5249, name: 'Peshawar' },
-  quetta: { lat: 30.1798, lon: 66.9750, name: 'Quetta' },
-  islamabad: { lat: 33.6844, lon: 73.0479, name: 'Islamabad' },
-};
+const DISTRICT_COORDS = PAKISTAN_COORDINATES_MAP;
 
 function detectLanguage(text: string): 'urdu' | 'roman_urdu' | 'english' {
   if (/[\u0600-\u06FF]/.test(text)) return 'urdu';
@@ -85,7 +65,12 @@ function getGeminiKey(): string | null {
   return getGeminiServerKey();
 }
 
-async function executeGeminiRequest(apiKey: string, payload: any, models: string[]) {
+async function executeGeminiRequest(apiKey: string, payload: any, models: string[]): Promise<{
+  text?: string;
+  model?: string;
+  isKeyInvalid?: boolean;
+  errorMessage?: string;
+}> {
   for (const model of models) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -104,13 +89,29 @@ async function executeGeminiRequest(apiKey: string, payload: any, models: string
         }
       } else {
         const errText = await res.text().catch(() => '');
-        console.warn(`Gemini model ${model} status ${res.status}:`, errText.substring(0, 120));
+        console.warn(`Gemini model ${model} status ${res.status}:`, errText.substring(0, 150));
+
+        // Detect if Google specifically rejected the key (deleted, revoked, invalid, permission denied)
+        if (res.status === 400 || res.status === 401 || res.status === 403) {
+          const isDeletedOrInvalid =
+            errText.includes('API_KEY_INVALID') ||
+            errText.includes('API key not valid') ||
+            errText.includes('PERMISSION_DENIED') ||
+            errText.includes('API key expired') ||
+            errText.includes('CONSUMER_INVALID');
+          if (isDeletedOrInvalid) {
+            return {
+              isKeyInvalid: true,
+              errorMessage: 'API key not valid or was deleted in Google AI Studio.'
+            };
+          }
+        }
       }
-    } catch (e) {
-      console.warn(`Gemini model ${model} attempt failed:`, e);
+    } catch (e: any) {
+      console.warn(`Gemini model ${model} attempt failed:`, e?.message || e);
     }
   }
-  return null;
+  return {};
 }
 
 async function callGemini(
@@ -118,7 +119,13 @@ async function callGemini(
   extraGrounding?: string,
   userCustomKey?: string,
   forcedLanguage?: 'urdu' | 'english' | null
-): Promise<{ text: string; model: string; usingCustomKey: boolean } | null> {
+): Promise<{
+  text?: string;
+  model?: string;
+  usingCustomKey?: boolean;
+  keyInvalid?: boolean;
+  keyErrorMessage?: string;
+}> {
   // Working models in priority order
   const models = ['gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.8-flash'];
 
@@ -161,22 +168,30 @@ Even if the user's prompt contains Urdu script or Roman Urdu, translate all agro
   const hasUserKey = Boolean(userCustomKey && userCustomKey.trim().length > 10);
   if (hasUserKey) {
     const userResult = await executeGeminiRequest(userCustomKey!.trim(), payload, models);
-    if (userResult) {
-      return { ...userResult, usingCustomKey: true };
+    if (userResult.isKeyInvalid) {
+      // CRITICAL: User deleted or invalidated their key in Google AI Studio!
+      // Must NOT fall back to server key or offline canned messages.
+      return {
+        keyInvalid: true,
+        keyErrorMessage: userResult.errorMessage || 'Google AI Studio API key has been deleted or is invalid.'
+      };
     }
-    console.warn('User custom Gemini API key failed or was rate-limited; falling back to server key...');
+    if (userResult.text) {
+      return { text: userResult.text, model: userResult.model!, usingCustomKey: true };
+    }
+    console.warn('User custom Gemini API key failed; checking server key...');
   }
 
-  // 2. Fallback to Shared Server Gemini Key
+  // 2. Fallback to Shared Server Gemini Key ONLY if user did not provide an invalid custom key
   const serverKey = getGeminiKey();
   if (serverKey) {
     const serverResult = await executeGeminiRequest(serverKey, payload, models);
-    if (serverResult) {
-      return { ...serverResult, usingCustomKey: false };
+    if (serverResult.text) {
+      return { text: serverResult.text, model: serverResult.model!, usingCustomKey: false };
     }
   }
 
-  return null;
+  return {};
 }
 
 export async function POST(req: NextRequest) {
@@ -302,11 +317,16 @@ export async function POST(req: NextRequest) {
     let liveWeatherFetched: { district: string; temp: number; humidity: number; wind: number } | null = null;
 
     if (specialist.agent === 'weather' || /\b(weather|temp\w*|rain\w*|barish|mosam|mausam|garmi|sardi|درجہ\s*حرارت)\b/i.test(lower) || /موسم|بارش|درجہ\s*حرارت/.test(message)) {
-      let matchedDistrict = DISTRICT_COORDS['faisalabad'];
-      for (const [key, val] of Object.entries(DISTRICT_COORDS)) {
-        if (lower.includes(key) || message.includes(val.name)) {
-          matchedDistrict = val;
-          break;
+      let matchedDistrict: { lat: number; lon: number; name: string } = { lat: 30.1575, lon: 71.5249, name: 'Multan' };
+      const matchedCity = findPakistanCity(message) || findPakistanCity(lower);
+      if (matchedCity) {
+        matchedDistrict = { lat: matchedCity.lat, lon: matchedCity.lon, name: matchedCity.name };
+      } else {
+        for (const [key, val] of Object.entries(DISTRICT_COORDS)) {
+          if (lower.includes(key) || message.includes(val.name)) {
+            matchedDistrict = { lat: val.lat, lon: val.lon, name: val.name };
+            break;
+          }
         }
       }
       try {
@@ -342,7 +362,42 @@ export async function POST(req: NextRequest) {
     // 4. Call Google Gemini LLM with Telemetry Grounding & Personal API Key
     const geminiResult = await callGemini(conversationMessages, extraGrounding, resolvedKey, forcedLangForGemini);
 
-    if (geminiResult) {
+    // CRITICAL: If custom key was deleted in Google AI Studio, halt and return error response
+    if (geminiResult.keyInvalid) {
+      // Clean up the deleted key from database profile if user is logged in
+      try {
+        const token =
+          req.cookies.get('kisan_auth_token')?.value ||
+          req.headers.get('authorization')?.replace('Bearer ', '');
+        if (token) {
+          const decoded: any = jwt.verify(token, JWT_SECRET);
+          if (decoded && decoded.id) {
+            await pool.query('UPDATE farmers SET gemini_api_key = NULL, updated_at = NOW() WHERE id = $1', [decoded.id]);
+          }
+        }
+      } catch {}
+
+      const invalidKeyNotice = lang === 'urdu'
+        ? '❌ **گوگل اے آئی اسٹوڈیو API Key غیر فعال یا ڈیلیٹ ہو چکی ہے!**\n\nآپ کی درج کردہ Gemini API Key گوگل اے آئی اسٹوڈیو (Google AI Studio) سے ڈیلیٹ یا تبدیل کر دی گئی ہے، جس کی وجہ سے اے آئی چیٹ بوٹ نے گفتگو روک دی ہے۔\n\nبراہِ کرم نئی اور درست API Key حاصل کر کے دوبارہ داخل کریں:\n1. [Google AI Studio (aistudio.google.com)](https://aistudio.google.com/app/apikey) پر جائیں۔\n2. نئی **Gemini API Key** بنائیں یا کاپی کریں۔\n3. اوپر **API Key** بٹن پر کلک کر کے نئی کی محفوظ کریں۔'
+        : '❌ **Google Gemini API Key Deleted or Invalid!**\n\nYour Gemini API key was deleted or invalidated in Google AI Studio (`aistudio.google.com`). The AI assistant has stopped chatting to prevent unauthorized or broken requests.\n\nPlease provide a new, active Gemini API key:\n1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)\n2. Create or copy an active **Gemini API Key**\n3. Click the **API Key** button in the header and save your new key.';
+
+      return NextResponse.json({
+        session_id: sessionId,
+        agent_name: 'security',
+        specialist_title: 'API Key Security Guard',
+        specialist_icon: '🔑',
+        response: invalidKeyNotice,
+        is_error: true,
+        key_invalid: true,
+        error: 'INVALID_API_KEY',
+        suggested_followups: [
+          lang === 'urdu' ? 'نئی API Key کیسے بنائیں؟' : 'How to create a new API Key?',
+          lang === 'urdu' ? 'Google AI Studio کھولیں' : 'Open Google AI Studio'
+        ]
+      }, { status: 400 });
+    }
+
+    if (geminiResult && geminiResult.text) {
       // Dynamic follow-up generation based on query context
       let followups: string[] = [];
       if (specialist.agent === 'weather') {

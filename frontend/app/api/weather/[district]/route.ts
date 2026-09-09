@@ -1,38 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const DISTRICT_COORDS: Record<string, { lat: number; lon: number; name: string }> = {
-  multan: { lat: 30.1575, lon: 71.5249, name: 'Multan' },
-  lahore: { lat: 31.5204, lon: 74.3587, name: 'Lahore' },
-  faisalabad: { lat: 31.4504, lon: 73.1350, name: 'Faisalabad' },
-  bahawalpur: { lat: 29.3544, lon: 71.6911, name: 'Bahawalpur' },
-  rawalpindi: { lat: 33.5651, lon: 73.0169, name: 'Rawalpindi' },
-  gujranwala: { lat: 32.1877, lon: 74.1945, name: 'Gujranwala' },
-  sargodha: { lat: 32.0836, lon: 72.6711, name: 'Sargodha' },
-  sahiwal: { lat: 30.6682, lon: 73.1114, name: 'Sahiwal' },
-  khanewal: { lat: 30.3017, lon: 71.9321, name: 'Khanewal' },
-  vehari: { lat: 30.0419, lon: 72.3528, name: 'Vehari' },
-  lodhran: { lat: 29.5405, lon: 71.6336, name: 'Lodhran' },
-  jhang: { lat: 31.2781, lon: 72.3317, name: 'Jhang' },
-  okara: { lat: 30.8081, lon: 73.4458, name: 'Okara' },
-  pakpattan: { lat: 30.3410, lon: 73.3866, name: 'Pakpattan' },
-  sheikhupura: { lat: 31.7131, lon: 73.9783, name: 'Sheikhupura' },
-  kasur: { lat: 31.1179, lon: 74.4408, name: 'Kasur' },
-  attock: { lat: 33.7667, lon: 72.3667, name: 'Attock' },
-  chakwal: { lat: 32.9328, lon: 72.8631, name: 'Chakwal' },
-  mianwali: { lat: 32.5839, lon: 71.5370, name: 'Mianwali' },
-  bhakkar: { lat: 31.6253, lon: 71.0657, name: 'Bhakkar' },
-  layyah: { lat: 30.9613, lon: 70.9390, name: 'Layyah' },
-  muzaffargarh: { lat: 30.0744, lon: 71.1847, name: 'Muzaffargarh' },
-  'd.g. khan': { lat: 30.0561, lon: 70.6348, name: 'D.G. Khan' },
-  rajanpur: { lat: 29.1035, lon: 70.3250, name: 'Rajanpur' },
-  'rahim yar khan': { lat: 28.4195, lon: 70.3024, name: 'Rahim Yar Khan' },
-  karachi: { lat: 24.8607, lon: 67.0011, name: 'Karachi' },
-  hyderabad: { lat: 25.3960, lon: 68.3578, name: 'Hyderabad' },
-  sukkur: { lat: 27.7052, lon: 68.8574, name: 'Sukkur' },
-  peshawar: { lat: 34.0151, lon: 71.5249, name: 'Peshawar' },
-  quetta: { lat: 30.1798, lon: 66.9750, name: 'Quetta' },
-  islamabad: { lat: 33.6844, lon: 73.0479, name: 'Islamabad' },
-};
+import { findPakistanCity, PAKISTAN_COORDINATES_MAP } from '@/lib/cities';
 
 function getWeatherDesc(code: number): string {
   if (code === 0) return 'Clear Sky (صاف آسمان)';
@@ -56,7 +23,43 @@ export async function GET(req: NextRequest, context: any) {
       districtStr = p?.district || 'Multan';
     }
     const decoded = decodeURIComponent(districtStr || '').trim().toLowerCase();
-    const coords = DISTRICT_COORDS[decoded] || DISTRICT_COORDS['multan'];
+    let coords: { lat: number; lon: number; name: string } =
+      PAKISTAN_COORDINATES_MAP[decoded] ||
+      (findPakistanCity(districtStr)
+        ? {
+            lat: findPakistanCity(districtStr)!.lat,
+            lon: findPakistanCity(districtStr)!.lon,
+            name: findPakistanCity(districtStr)!.name,
+          }
+        : null) as any;
+
+    // Dynamic fallback: If not in static directory, query Open-Meteo Pakistan Geocoding API
+    if (!coords && decoded) {
+      try {
+        const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+          decoded
+        )}&count=1&language=en&country_code=PK`;
+        const geoRes = await fetch(geoUrl, {
+          headers: { 'User-Agent': 'KisanDost/1.0' },
+          signal: AbortSignal.timeout(3500),
+        });
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          if (geoData?.results && geoData.results.length > 0) {
+            const top = geoData.results[0];
+            coords = {
+              lat: top.latitude,
+              lon: top.longitude,
+              name: top.name,
+            };
+          }
+        }
+      } catch {}
+    }
+
+    if (!coords) {
+      coords = PAKISTAN_COORDINATES_MAP['multan'] || { lat: 30.1575, lon: 71.5249, name: 'Multan' };
+    }
 
     const recordedAt = new Date().toISOString();
     let isLive = false;
